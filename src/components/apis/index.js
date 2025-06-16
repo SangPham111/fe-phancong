@@ -1,7 +1,7 @@
 // src/api/api.js
 import axios from 'axios';
 
-const API_BASE = 'http://localhost:3000/api'; // Thay đổi nếu cần
+const API_BASE = 'https://phancong.onrender.com/api'; // Thay đổi nếu cần
 
 // ============================= WORKER =============================
 export const getAllWorkers = () => axios.get(`${API_BASE}/worker`);
