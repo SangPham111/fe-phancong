@@ -3,15 +3,14 @@ import {
   TextField,
   Button,
   Box,
-  MenuItem,
   Typography,
   Paper,
+  Autocomplete
 } from '@mui/material';
 import {
   createCar,
+  getAvailableWorkers,
   getAllSupervisors,
-  getMainWorkers,
-  getAssistantWorkers
 } from '../apis/index';
 
 const AddCar = ({ onSuccess }) => {
@@ -24,29 +23,29 @@ const AddCar = ({ onSuccess }) => {
     supervisor: '',
   });
 
-  const [mainWorkers, setMainWorkers] = useState([]);
-  const [subWorkers, setSubWorkers] = useState([]);
+  const [availableWorkers, setAvailableWorkers] = useState([]);
   const [supervisors, setSupervisors] = useState([]);
 
-  const fetchWorkers = async () => {
-    try {
-      const [mainRes, subRes, supervisorRes] = await Promise.all([
-        getMainWorkers(),
-        getAssistantWorkers(),
-        getAllSupervisors(), // ✅ Dùng API giám sát riêng
-      ]);
-
-      setMainWorkers(mainRes.data);
-      setSubWorkers(subRes.data);
-      setSupervisors(supervisorRes.data); // ✅
-    } catch (error) {
-      console.error('Lỗi khi lấy danh sách thợ hoặc giám sát:', error);
-    }
-  };
-
   useEffect(() => {
-    fetchWorkers();
+    const fetchData = async () => {
+      try {
+        const [workerRes, supervisorRes] = await Promise.all([
+          getAvailableWorkers(),
+          getAllSupervisors(),
+        ]);
+        console.log('Danh sách thợ:', workerRes.data);
+        setAvailableWorkers(workerRes.data);
+        setSupervisors(supervisorRes.data);
+      } catch (error) {
+        console.error('Lỗi khi lấy dữ liệu:', error);
+      }
+    };
+    fetchData();
   }, []);
+
+  // ⚠ Sửa lại từ w.type ➝ w.role
+  const mainWorkers = availableWorkers.filter((w) => w.role === 'thợ chính');
+  const subWorkers = availableWorkers.filter((w) => w.role === 'thợ phụ');
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -100,59 +99,62 @@ const AddCar = ({ onSuccess }) => {
           required
         />
         <TextField
-  label="Thời gian hẹn giao xe"
-  name="deliveryTime"
-  type="datetime-local" // ✅ thay đổi tại đây
-  value={formData.deliveryTime}
-  onChange={handleChange}
-  InputLabelProps={{ shrink: true }}
-  required
-/>
-
-        <TextField
-          select
-          label="Thợ chính"
-          name="mainWorker"
-          value={formData.mainWorker}
+          label="Thời gian hẹn giao xe"
+          name="deliveryTime"
+          type="datetime-local"
+          value={formData.deliveryTime}
           onChange={handleChange}
-        >
-          <MenuItem value="">-- Không chọn --</MenuItem>
-          {mainWorkers.map((w) => (
-            <MenuItem key={w._id} value={w._id}>
-              {w.name}
-            </MenuItem>
-          ))}
-        </TextField>
+          InputLabelProps={{ shrink: true }}
+          required
+        />
 
-        <TextField
-          select
-          label="Thợ phụ"
-          name="subWorker"
-          value={formData.subWorker}
-          onChange={handleChange}
-        >
-          <MenuItem value="">-- Không chọn --</MenuItem>
-          {subWorkers.map((w) => (
-            <MenuItem key={w._id} value={w._id}>
-              {w.name}
-            </MenuItem>
-          ))}
-        </TextField>
+        {/* Thợ chính */}
+        <Autocomplete
+          options={mainWorkers}
+          getOptionLabel={(option) => option.name || ''}
+          value={mainWorkers.find((w) => w._id === formData.mainWorker) || null}
+          onChange={(e, value) =>
+            setFormData((prev) => ({
+              ...prev,
+              mainWorker: value ? value._id : '',
+            }))
+          }
+          openOnFocus
+          noOptionsText="Không có thợ nào đang rảnh"
+          renderInput={(params) => <TextField {...params} label="Thợ chính" />}
+        />
 
-        <TextField
-          select
-          label="Giám sát"
-          name="supervisor"
-          value={formData.supervisor}
-          onChange={handleChange}
-        >
-          <MenuItem value="">-- Không chọn --</MenuItem>
-          {supervisors.map((s) => (
-            <MenuItem key={s._id} value={s._id}>
-              {s.name}
-            </MenuItem>
-          ))}
-        </TextField>
+        {/* Thợ phụ */}
+        <Autocomplete
+          options={subWorkers}
+          getOptionLabel={(option) => option.name || ''}
+          value={subWorkers.find((w) => w._id === formData.subWorker) || null}
+          onChange={(e, value) =>
+            setFormData((prev) => ({
+              ...prev,
+              subWorker: value ? value._id : '',
+            }))
+          }
+          openOnFocus
+          noOptionsText="Không có thợ nào đang rảnh"
+          renderInput={(params) => <TextField {...params} label="Thợ phụ" />}
+        />
+
+        {/* Giám sát */}
+        <Autocomplete
+          options={supervisors}
+          getOptionLabel={(option) => option.name || ''}
+          value={supervisors.find((s) => s._id === formData.supervisor) || null}
+          onChange={(e, value) =>
+            setFormData((prev) => ({
+              ...prev,
+              supervisor: value ? value._id : '',
+            }))
+          }
+          openOnFocus
+          noOptionsText="Không tìm thấy giám sát"
+          renderInput={(params) => <TextField {...params} label="Giám sát" />}
+        />
 
         <Button type="submit" variant="contained">
           Thêm xe

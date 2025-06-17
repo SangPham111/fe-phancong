@@ -30,6 +30,7 @@ const AppBarComponent = () => {
     { label: 'Thêm xe', path: '/cars/add' },
     { label: 'Thợ chính', path: '/workers/main' },
     { label: 'Thợ phụ', path: '/workers/sub' },
+    { label: 'Thợ rảnh', path: '/workers/available' },
     { label: 'Giám sát', path: '/supervisors' },
   ];
 

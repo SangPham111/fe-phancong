@@ -11,6 +11,8 @@ export const updateWorker = (id, data) => axios.put(`${API_BASE}/worker/${id}`, 
 export const deleteWorker = (id) => axios.delete(`${API_BASE}/worker/${id}`);
 export const getMainWorkers = () => axios.get(`${API_BASE}/worker/main`);
 export const getAssistantWorkers = () => axios.get(`${API_BASE}/worker/assistant`);
+export const getAvailableWorkers = () => axios.get(`${API_BASE}/worker/available`);
+export const getBusyWorkersWithCars = () => axios.get(`${API_BASE}/worker/busy`);
 
 // ============================= SUPERVISOR =============================
 export const getAllSupervisors = () => axios.get(`${API_BASE}/supervisors`);
@@ -25,3 +27,5 @@ export const getCarById = (id) => axios.get(`${API_BASE}/cars/${id}`);
 export const createCar = (data) => axios.post(`${API_BASE}/cars`, data);
 export const updateCar = (id, data) => axios.put(`${API_BASE}/cars/${id}`, data);
 export const deleteCar = (id) => axios.delete(`${API_BASE}/cars/${id}`);
+export const updateCarStatus = (id, status) =>
+  axios.put(`${API_BASE}/cars/${id}/status`, { status });

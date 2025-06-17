@@ -5,7 +5,8 @@ import {
   deleteCar,
   getAllSupervisors,
   getMainWorkers,
-  getAssistantWorkers
+  getAssistantWorkers,
+  updateCarStatus
 } from '../apis/index';
 import {
   Typography,
@@ -27,7 +28,7 @@ import {
   useMediaQuery,
   useTheme
 } from '@mui/material';
-import { Edit, Delete } from '@mui/icons-material';
+import { Edit, Delete, CheckCircle, HourglassEmpty } from '@mui/icons-material';
 
 const ManageCars = () => {
   const [cars, setCars] = useState([]);
@@ -100,6 +101,16 @@ const ManageCars = () => {
     }
   };
 
+  const handleChangeStatus = async (id, newStatus) => {
+    try {
+      await updateCarStatus(id, newStatus);
+      fetchCars();
+    } catch (err) {
+      console.error('Lỗi khi cập nhật trạng thái xe:', err);
+      alert('Không thể cập nhật trạng thái xe');
+    }
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setEditData((prev) => ({ ...prev, [name]: value }));
@@ -125,6 +136,26 @@ const ManageCars = () => {
                 <Typography>Thợ chính: {car.mainWorker?.name || ''}</Typography>
                 <Typography>Thợ phụ: {car.subWorker?.name || ''}</Typography>
                 <Typography>Giám sát: {car.supervisor?.name || ''}</Typography>
+                <Box display="flex" alignItems="center" gap={1}>
+                  <Typography>Trạng thái:</Typography>
+                  {car.status === 'done' ? (
+                    <IconButton
+                      title="Đã hoàn thành – bấm để chuyển sang đang xử lý"
+                      onClick={() => handleChangeStatus(car._id, 'working')}
+                      color="success"
+                    >
+                      <CheckCircle />
+                    </IconButton>
+                  ) : (
+                    <IconButton
+                      title="Đang xử lý – bấm để đánh dấu hoàn thành"
+                      onClick={() => handleChangeStatus(car._id, 'done')}
+                      color="warning"
+                    >
+                      <HourglassEmpty />
+                    </IconButton>
+                  )}
+                </Box>
                 <Box mt={1}>
                   <IconButton onClick={() => handleEditClick(car)} size="small">
                     <Edit fontSize="small" />
@@ -137,7 +168,7 @@ const ManageCars = () => {
             ))}
           </Box>
         ) : (
-          <Box sx={{ minWidth: 800, overflowX: 'auto' }}>
+          <Box sx={{ minWidth: 1000, overflowX: 'auto' }}>
             <Table size="small">
               <TableHead>
                 <TableRow>
@@ -150,6 +181,7 @@ const ManageCars = () => {
                   <TableCell>Thợ chính</TableCell>
                   <TableCell>Thợ phụ</TableCell>
                   <TableCell>Giám sát</TableCell>
+                  <TableCell>Trạng thái</TableCell>
                   <TableCell>Thao tác</TableCell>
                 </TableRow>
               </TableHead>
@@ -165,6 +197,25 @@ const ManageCars = () => {
                     <TableCell>{car.mainWorker?.name || ''}</TableCell>
                     <TableCell>{car.subWorker?.name || ''}</TableCell>
                     <TableCell>{car.supervisor?.name || ''}</TableCell>
+                    <TableCell>
+                      {car.status === 'done' ? (
+                        <IconButton
+                          title="Đã hoàn thành – bấm để chuyển sang đang xử lý"
+                          onClick={() => handleChangeStatus(car._id, 'working')}
+                          color="success"
+                        >
+                          <CheckCircle />
+                        </IconButton>
+                      ) : (
+                        <IconButton
+                          title="Đang xử lý – bấm để đánh dấu hoàn thành"
+                          onClick={() => handleChangeStatus(car._id, 'done')}
+                          color="warning"
+                        >
+                          <HourglassEmpty />
+                        </IconButton>
+                      )}
+                    </TableCell>
                     <TableCell>
                       <IconButton onClick={() => handleEditClick(car)} size="small">
                         <Edit fontSize="small" />

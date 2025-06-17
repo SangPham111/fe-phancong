@@ -7,6 +7,7 @@ import SupervisorsPage from './components/pages/SupervisorsPage';
 import CarsTodayPage from './components/pages/Home';
 import AddCarPage from './components/pages/AddCar';
 import ManageCarsPage from './components/pages/ManageCars';
+import AvailableWorkersPage from './components/pages/AvailableWorkersPage'
 import { Box, TextField, Button, Typography, useMediaQuery, useTheme, Paper } from '@mui/material';
 
 const PASSWORD = 'otobathanh2025@';
@@ -115,6 +116,14 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+  path="/workers/available"
+  element={
+    <ProtectedRoute>
+      <AvailableWorkersPage />
+    </ProtectedRoute>
+  }
+/>
         </Routes>
       </Box>
     </Router>
