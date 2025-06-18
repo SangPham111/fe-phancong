@@ -1,12 +1,13 @@
+// QUAN TRỌNG: Phần import có thêm getAvailableWorkers
 import React, { useEffect, useState } from 'react';
 import {
   getAllCars,
   updateCar,
   deleteCar,
   getAllSupervisors,
-  getMainWorkers,
-  getAssistantWorkers,
-  updateCarStatus
+  updateCarStatus,
+  getAvailableWorkers,
+  getAllCateCars,
 } from '../apis/index';
 import {
   Typography,
@@ -22,11 +23,13 @@ import {
   DialogActions,
   TextField,
   Button,
-  MenuItem,
   Box,
   Paper,
   useMediaQuery,
-  useTheme
+  useTheme,
+  Autocomplete,
+  Snackbar,
+  Alert,
 } from '@mui/material';
 import { Edit, Delete, CheckCircle, HourglassEmpty } from '@mui/icons-material';
 
@@ -34,9 +37,10 @@ const ManageCars = () => {
   const [cars, setCars] = useState([]);
   const [editOpen, setEditOpen] = useState(false);
   const [editData, setEditData] = useState({});
-  const [mainWorkers, setMainWorkers] = useState([]);
-  const [subWorkers, setSubWorkers] = useState([]);
+  const [workers, setWorkers] = useState([]);
   const [supervisors, setSupervisors] = useState([]);
+  const [carTypes, setCarTypes] = useState([]);
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -50,43 +54,93 @@ const ManageCars = () => {
     }
   };
 
-  const fetchWorkers = async () => {
+  const fetchData = async () => {
     try {
-      const [mainRes, subRes, supervisorRes] = await Promise.all([
-        getMainWorkers(),
-        getAssistantWorkers(),
+      const [workerRes, supervisorRes] = await Promise.all([
+        getAvailableWorkers(),
         getAllSupervisors(),
       ]);
-      setMainWorkers(mainRes.data);
-      setSubWorkers(subRes.data);
+      setWorkers(workerRes.data);
       setSupervisors(supervisorRes.data);
     } catch (error) {
       console.error('Lỗi khi lấy danh sách thợ hoặc giám sát:', error);
     }
   };
 
+  const fetchCarTypes = async () => {
+    try {
+      const res = await getAllCateCars();
+      setCarTypes(res.data);
+    } catch (error) {
+      console.error('Lỗi khi lấy loại xe:', error);
+    }
+  };
+
   useEffect(() => {
     fetchCars();
-    fetchWorkers();
+    fetchData();
+    fetchCarTypes();
   }, []);
 
-  const handleEditClick = (car) => {
-    setEditData({
-      ...car,
-      mainWorker: car.mainWorker?._id || '',
-      subWorker: car.subWorker?._id || '',
-      supervisor: car.supervisor?._id || '',
-    });
-    setEditOpen(true);
+  const getWorkerNames = (car, role) => {
+    return car.workers
+      .filter((w) => w.role === role)
+      .map((w) => w.worker?.name)
+      .filter(Boolean)
+      .join(', ');
+  };
+
+  const handleEditClick = async (car) => {
+    try {
+      const availableRes = await getAvailableWorkers();
+      let merged = [...availableRes.data];
+
+      car.workers.forEach(({ worker }) => {
+        if (!merged.find((w) => w._id === worker._id)) {
+          merged.push(worker);
+        }
+      });
+
+      setWorkers(merged);
+
+      const mainWorkerIds = car.workers.filter((w) => w.role === 'main').map((w) => w.worker._id);
+      const subWorkerIds = car.workers.filter((w) => w.role === 'sub').map((w) => w.worker._id);
+
+      setEditData({
+        ...car,
+        mainWorkers: mainWorkerIds,
+        subWorkers: subWorkerIds,
+        supervisor: car.supervisor?._id || '',
+        carType: car.carType || null,
+      });
+
+      setEditOpen(true);
+    } catch (error) {
+      console.error('Lỗi khi lấy dữ liệu thợ khi sửa xe:', error);
+    }
   };
 
   const handleEditSave = async () => {
     try {
-      await updateCar(editData._id, editData);
+      const updatedCar = {
+        plateNumber: editData.plateNumber,
+        carType: editData.carType?._id || '',
+        deliveryTime: editData.deliveryTime,
+        supervisor: editData.supervisor || null,
+        workers: [
+          ...editData.mainWorkers.map((id) => ({ worker: id, role: 'main' })),
+          ...editData.subWorkers.map((id) => ({ worker: id, role: 'sub' })),
+        ],
+      };
+
+      await updateCar(editData._id, updatedCar);
       setEditOpen(false);
       fetchCars();
+      fetchData();
+      setSnackbar({ open: true, message: 'Cập nhật xe thành công', severity: 'success' });
     } catch (err) {
       console.error('Lỗi khi cập nhật xe:', err);
+      setSnackbar({ open: true, message: 'Cập nhật xe thất bại', severity: 'error' });
     }
   };
 
@@ -95,8 +149,10 @@ const ManageCars = () => {
       try {
         await deleteCar(id);
         fetchCars();
+        setSnackbar({ open: true, message: 'Xoá xe thành công', severity: 'success' });
       } catch (err) {
         console.error('Lỗi khi xoá xe:', err);
+        setSnackbar({ open: true, message: 'Xoá xe thất bại', severity: 'error' });
       }
     }
   };
@@ -107,13 +163,21 @@ const ManageCars = () => {
       fetchCars();
     } catch (err) {
       console.error('Lỗi khi cập nhật trạng thái xe:', err);
-      alert('Không thể cập nhật trạng thái xe');
     }
   };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setEditData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const mergeSelectedWorkers = (selectedIds) => {
+    const selectedWorkers = selectedIds?.map((id) => {
+      const fromAvailable = workers.find((w) => w._id === id);
+      return fromAvailable || { _id: id, name: '(Không rõ)' };
+    }) || [];
+    const all = [...workers, ...selectedWorkers];
+    return all.filter((w, i, arr) => arr.findIndex(a => a._id === w._id) === i);
   };
 
   return (
@@ -124,39 +188,25 @@ const ManageCars = () => {
 
       <Paper sx={{ mt: 3, p: { xs: 1, sm: 2 } }}>
         {isMobile ? (
-          <Box display="flex" flexDirection="column" gap={2}>
+          // Giao diện mobile - dạng dọc
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             {cars.map((car, index) => (
-              <Paper key={car._id} sx={{ p: 2, border: '1px solid #ccc' }}>
-                <Typography variant="subtitle2">STT: {index + 1}</Typography>
-                <Typography>Biển số: {car.plateNumber}</Typography>
-                <Typography>Loại xe: {car.carType}</Typography>
-                <Typography>Ngày nhận: {car.currentDate}</Typography>
-                <Typography>Giờ nhận: {car.currentTime}</Typography>
-                <Typography>Thời gian giao: {car.deliveryTime}</Typography>
-                <Typography>Thợ chính: {car.mainWorker?.name || ''}</Typography>
-                <Typography>Thợ phụ: {car.subWorker?.name || ''}</Typography>
-                <Typography>Giám sát: {car.supervisor?.name || ''}</Typography>
-                <Box display="flex" alignItems="center" gap={1}>
-                  <Typography>Trạng thái:</Typography>
-                  {car.status === 'done' ? (
-                    <IconButton
-                      title="Đã hoàn thành – bấm để chuyển sang đang xử lý"
-                      onClick={() => handleChangeStatus(car._id, 'working')}
-                      color="success"
-                    >
-                      <CheckCircle />
-                    </IconButton>
-                  ) : (
-                    <IconButton
-                      title="Đang xử lý – bấm để đánh dấu hoàn thành"
-                      onClick={() => handleChangeStatus(car._id, 'done')}
-                      color="warning"
-                    >
-                      <HourglassEmpty />
-                    </IconButton>
-                  )}
-                </Box>
-                <Box mt={1}>
+              <Paper key={car._id} sx={{ p: 2 }}>
+                <Typography><strong>#{index + 1}</strong> - {car.plateNumber}</Typography>
+                <Typography><strong>Loại xe:</strong> {car.carType?.name}</Typography>
+                <Typography><strong>Ngày nhận:</strong> {car.currentDate}</Typography>
+                <Typography><strong>Giờ nhận:</strong> {car.currentTime}</Typography>
+                <Typography><strong>Thời gian giao:</strong> {car.deliveryTime}</Typography>
+                <Typography><strong>Thợ chính:</strong> {getWorkerNames(car, 'main')}</Typography>
+                <Typography><strong>Thợ phụ:</strong> {getWorkerNames(car, 'sub')}</Typography>
+                <Typography><strong>Giám sát:</strong> {car.supervisor?.name || ''}</Typography>
+                <Box sx={{ mt: 1, display: 'flex', gap: 1 }}>
+                  <IconButton
+                    onClick={() => handleChangeStatus(car._id, car.status === 'done' ? 'working' : 'done')}
+                    color={car.status === 'done' ? 'success' : 'warning'}
+                  >
+                    {car.status === 'done' ? <CheckCircle /> : <HourglassEmpty />}
+                  </IconButton>
                   <IconButton onClick={() => handleEditClick(car)} size="small">
                     <Edit fontSize="small" />
                   </IconButton>
@@ -168,6 +218,7 @@ const ManageCars = () => {
             ))}
           </Box>
         ) : (
+          // Giao diện desktop - dạng bảng
           <Box sx={{ minWidth: 1000, overflowX: 'auto' }}>
             <Table size="small">
               <TableHead>
@@ -190,28 +241,20 @@ const ManageCars = () => {
                   <TableRow key={car._id}>
                     <TableCell>{index + 1}</TableCell>
                     <TableCell>{car.plateNumber}</TableCell>
-                    <TableCell>{car.carType}</TableCell>
+                    <TableCell>{car.carType?.name}</TableCell>
                     <TableCell>{car.currentDate}</TableCell>
                     <TableCell>{car.currentTime}</TableCell>
                     <TableCell>{car.deliveryTime}</TableCell>
-                    <TableCell>{car.mainWorker?.name || ''}</TableCell>
-                    <TableCell>{car.subWorker?.name || ''}</TableCell>
+                    <TableCell>{getWorkerNames(car, 'main')}</TableCell>
+                    <TableCell>{getWorkerNames(car, 'sub')}</TableCell>
                     <TableCell>{car.supervisor?.name || ''}</TableCell>
                     <TableCell>
                       {car.status === 'done' ? (
-                        <IconButton
-                          title="Đã hoàn thành – bấm để chuyển sang đang xử lý"
-                          onClick={() => handleChangeStatus(car._id, 'working')}
-                          color="success"
-                        >
+                        <IconButton onClick={() => handleChangeStatus(car._id, 'working')} color="success">
                           <CheckCircle />
                         </IconButton>
                       ) : (
-                        <IconButton
-                          title="Đang xử lý – bấm để đánh dấu hoàn thành"
-                          onClick={() => handleChangeStatus(car._id, 'done')}
-                          color="warning"
-                        >
+                        <IconButton onClick={() => handleChangeStatus(car._id, 'done')} color="warning">
                           <HourglassEmpty />
                         </IconButton>
                       )}
@@ -232,6 +275,7 @@ const ManageCars = () => {
         )}
       </Paper>
 
+
       <Dialog open={editOpen} onClose={() => setEditOpen(false)} fullWidth maxWidth="sm">
         <DialogTitle>Cập nhật thông tin xe</DialogTitle>
         <DialogContent>
@@ -244,14 +288,19 @@ const ManageCars = () => {
               required
               fullWidth
             />
-            <TextField
-              label="Loại xe"
-              name="carType"
-              value={editData.carType || ''}
-              onChange={handleChange}
-              required
-              fullWidth
+            <Autocomplete
+              options={carTypes}
+              getOptionLabel={(option) => option.name}
+              value={carTypes.find((c) => c._id === editData.carType?._id) || null}
+              onChange={(e, newValue) => {
+                setEditData((prev) => ({ ...prev, carType: newValue }));
+              }}
+              renderInput={(params) => (
+                <TextField {...params} label="Loại xe" required fullWidth />
+              )}
+              isOptionEqualToValue={(option, value) => option._id === value._id}
             />
+
             <TextField
               label="Thời gian giao"
               name="deliveryTime"
@@ -262,58 +311,77 @@ const ManageCars = () => {
               required
               fullWidth
             />
-            <TextField
-              select
-              label="Thợ chính"
-              name="mainWorker"
-              value={editData.mainWorker || ''}
-              onChange={handleChange}
-              fullWidth
-            >
-              <MenuItem value="">-- Không chọn --</MenuItem>
-              {mainWorkers.map((w) => (
-                <MenuItem key={w._id} value={w._id}>
-                  {w.name}
-                </MenuItem>
-              ))}
-            </TextField>
-            <TextField
-              select
-              label="Thợ phụ"
-              name="subWorker"
-              value={editData.subWorker || ''}
-              onChange={handleChange}
-              fullWidth
-            >
-              <MenuItem value="">-- Không chọn --</MenuItem>
-              {subWorkers.map((w) => (
-                <MenuItem key={w._id} value={w._id}>
-                  {w.name}
-                </MenuItem>
-              ))}
-            </TextField>
-            <TextField
-              select
-              label="Giám sát"
-              name="supervisor"
-              value={editData.supervisor || ''}
-              onChange={handleChange}
-              fullWidth
-            >
-              <MenuItem value="">-- Không chọn --</MenuItem>
-              {supervisors.map((s) => (
-                <MenuItem key={s._id} value={s._id}>
-                  {s.name}
-                </MenuItem>
-              ))}
-            </TextField>
+            <Autocomplete
+              multiple
+              options={mergeSelectedWorkers(editData.mainWorkers)}
+              getOptionLabel={(option) => option.name}
+              value={mergeSelectedWorkers(editData.mainWorkers).filter((w) => editData.mainWorkers?.includes(w._id))}
+              onChange={(e, newValue) => {
+                const selectedIds = newValue.map((w) => w._id);
+                // Loại bỏ các ID bị trùng với subWorkers
+                const filtered = selectedIds.filter((id) => !editData.subWorkers.includes(id));
+                setEditData((prev) => ({ ...prev, mainWorkers: filtered }));
+              }}
+              renderInput={(params) => (
+                <TextField {...params} label="Thợ chính" placeholder="Tìm theo tên" />
+              )}
+            />
+
+            <Autocomplete
+              multiple
+              options={mergeSelectedWorkers(editData.subWorkers)}
+              getOptionLabel={(option) => option.name}
+              value={mergeSelectedWorkers(editData.subWorkers).filter((w) => editData.subWorkers?.includes(w._id))}
+              onChange={(e, newValue) => {
+                const selectedIds = newValue.map((w) => w._id);
+                // Loại bỏ các ID bị trùng với mainWorkers
+                const filtered = selectedIds.filter((id) => !editData.mainWorkers.includes(id));
+                setEditData((prev) => ({ ...prev, subWorkers: filtered }));
+              }}
+              renderInput={(params) => (
+                <TextField {...params} label="Thợ phụ" placeholder="Tìm theo tên" />
+              )}
+            />
+
+            <Autocomplete
+              options={supervisors}
+              getOptionLabel={(option) => option.name}
+              value={supervisors.find((s) => s._id === editData.supervisor) || null}
+              onChange={(e, newValue) =>
+                setEditData((prev) => ({
+                  ...prev,
+                  supervisor: newValue ? newValue._id : '',
+                }))
+              }
+              renderInput={(params) => (
+                <TextField {...params} label="Giám sát" placeholder="Tìm theo tên" />
+              )}
+              isOptionEqualToValue={(option, value) => option._id === value._id}
+            />
           </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setEditOpen(false)}>Huỷ</Button>
-          <Button onClick={handleEditSave} variant="contained">Lưu</Button>
+          <Button onClick={handleEditSave} variant="contained">
+            Lưu
+          </Button>
         </DialogActions>
       </Dialog>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={3000}
+        onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

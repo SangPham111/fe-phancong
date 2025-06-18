@@ -36,6 +36,18 @@ const Home = () => {
 
   const todayDisplay = new Date().toLocaleDateString('vi-VN');
 
+  const getWorkersByRole = (workers = []) => {
+    const mainWorkers = workers
+      .filter((w) => w.role === 'main')
+      .map((w) => w.worker?.name)
+      .join(', ');
+    const subWorkers = workers
+      .filter((w) => w.role === 'sub')
+      .map((w) => w.worker?.name)
+      .join(', ');
+    return { mainWorkers, subWorkers };
+  };
+
   return (
     <Box
       sx={{
@@ -57,24 +69,25 @@ const Home = () => {
       {carsToday.length === 0 ? (
         <Typography>Không có xe nào trong ngày hôm nay.</Typography>
       ) : isMobile ? (
-        // 👉 Giao diện MOBILE: Card cho từng xe
         <Box display="flex" flexDirection="column" gap={2}>
-          {carsToday.map((car, index) => (
-            <Paper key={car._id} elevation={2} sx={{ p: 2 }}>
-              <Typography variant="subtitle1" fontWeight="bold">
-                #{index + 1} - {car.plateNumber}
-              </Typography>
-              <Typography>Loại xe: {car.carType}</Typography>
-              <Typography>Nhận: {car.currentTime}</Typography>
-              <Typography>Giao: {car.deliveryTime}</Typography>
-              <Typography>Thợ chính: {car.mainWorker?.name || '---'}</Typography>
-              <Typography>Thợ phụ: {car.subWorker?.name || '---'}</Typography>
-              <Typography>Giám sát: {car.supervisor?.name || '---'}</Typography>
-            </Paper>
-          ))}
+          {carsToday.map((car, index) => {
+            const { mainWorkers, subWorkers } = getWorkersByRole(car.workers);
+            return (
+              <Paper key={car._id} elevation={2} sx={{ p: 2 }}>
+                <Typography variant="subtitle1" fontWeight="bold">
+                  #{index + 1} - {car.plateNumber}
+                </Typography>
+                <Typography>Loại xe: {car.carType?.name || '---'}</Typography>
+                <Typography>Nhận: {car.currentTime}</Typography>
+                <Typography>Giao: {car.deliveryTime}</Typography>
+                <Typography>Thợ chính: {mainWorkers || '---'}</Typography>
+                <Typography>Thợ phụ: {subWorkers || '---'}</Typography>
+                <Typography>Giám sát: {car.supervisor?.name || '---'}</Typography>
+              </Paper>
+            );
+          })}
         </Box>
       ) : (
-        // 👉 Giao diện DESKTOP: Bảng
         <Paper elevation={3} sx={{ p: 1 }}>
           <Table size="medium">
             <TableHead>
@@ -90,18 +103,21 @@ const Home = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {carsToday.map((car, index) => (
-                <TableRow key={car._id}>
-                  <TableCell>{index + 1}</TableCell>
-                  <TableCell>{car.plateNumber}</TableCell>
-                  <TableCell>{car.carType}</TableCell>
-                  <TableCell>{car.currentTime}</TableCell>
-                  <TableCell>{car.deliveryTime}</TableCell>
-                  <TableCell>{car.mainWorker?.name || '---'}</TableCell>
-                  <TableCell>{car.subWorker?.name || '---'}</TableCell>
-                  <TableCell>{car.supervisor?.name || '---'}</TableCell>
-                </TableRow>
-              ))}
+              {carsToday.map((car, index) => {
+                const { mainWorkers, subWorkers } = getWorkersByRole(car.workers);
+                return (
+                  <TableRow key={car._id}>
+                    <TableCell>{index + 1}</TableCell>
+                    <TableCell>{car.plateNumber}</TableCell>
+                    <TableCell>{car.carType?.name || '---'}</TableCell>
+                    <TableCell>{car.currentTime}</TableCell>
+                    <TableCell>{car.deliveryTime}</TableCell>
+                    <TableCell>{mainWorkers || '---'}</TableCell>
+                    <TableCell>{subWorkers || '---'}</TableCell>
+                    <TableCell>{car.supervisor?.name || '---'}</TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </Paper>

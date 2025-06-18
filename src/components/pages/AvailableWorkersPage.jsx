@@ -51,7 +51,6 @@ const AvailableWorkersPage = () => {
               <TableRow>
                 <TableCell>STT</TableCell>
                 <TableCell>Tên</TableCell>
-                <TableCell>Vai trò</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -59,7 +58,6 @@ const AvailableWorkersPage = () => {
                 <TableRow key={worker._id}>
                   <TableCell>{index + 1}</TableCell>
                   <TableCell>{worker.name}</TableCell>
-                  <TableCell>{worker.role}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

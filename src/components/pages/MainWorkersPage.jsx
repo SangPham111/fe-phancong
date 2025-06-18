@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
-  getMainWorkers,
+  getAllWorkers,
   deleteWorker,
   updateWorker,
 } from '../apis/index';
@@ -21,14 +21,14 @@ import {
 } from '@mui/material';
 import { Edit, Delete } from '@mui/icons-material';
 
-const MainWorkersPage = () => {
+const WorkersPage = () => {
   const [workers, setWorkers] = useState([]);
   const [editOpen, setEditOpen] = useState(false);
   const [editData, setEditData] = useState({ id: '', name: '', phone: '' });
 
   const fetchWorkers = async () => {
     try {
-      const res = await getMainWorkers();
+      const res = await getAllWorkers();
       setWorkers(res.data);
     } catch (error) {
       console.error('Lỗi khi lấy danh sách thợ:', error);
@@ -51,7 +51,11 @@ const MainWorkersPage = () => {
   };
 
   const handleEditClick = (worker) => {
-    setEditData({ id: worker._id, name: worker.name, phone: worker.phone });
+    setEditData({
+      id: worker._id,
+      name: worker.name,
+      phone: worker.phone || '',
+    });
     setEditOpen(true);
   };
 
@@ -71,10 +75,10 @@ const MainWorkersPage = () => {
   return (
     <div style={{ padding: 20 }}>
       <Typography variant="h5" gutterBottom>
-        Danh sách thợ chính
+        Danh sách thợ
       </Typography>
 
-      <AddWorkerForm onSuccess={fetchWorkers} role="thợ chính" />
+      <AddWorkerForm onSuccess={fetchWorkers} />
 
       <List>
         {workers.map((w) => (
@@ -91,7 +95,7 @@ const MainWorkersPage = () => {
                 </>
               }
             >
-              {w.name}
+              {w.name} {w.phone ? `- ${w.phone}` : ''}
             </ListItem>
             <Divider />
           </React.Fragment>
@@ -123,4 +127,4 @@ const MainWorkersPage = () => {
   );
 };
 
-export default MainWorkersPage;
+export default WorkersPage;

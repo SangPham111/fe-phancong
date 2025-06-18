@@ -9,8 +9,6 @@ export const getWorkerById = (id) => axios.get(`${API_BASE}/worker/${id}`);
 export const createWorker = (data) => axios.post(`${API_BASE}/worker`, data);
 export const updateWorker = (id, data) => axios.put(`${API_BASE}/worker/${id}`, data);
 export const deleteWorker = (id) => axios.delete(`${API_BASE}/worker/${id}`);
-export const getMainWorkers = () => axios.get(`${API_BASE}/worker/main`);
-export const getAssistantWorkers = () => axios.get(`${API_BASE}/worker/assistant`);
 export const getAvailableWorkers = () => axios.get(`${API_BASE}/worker/available`);
 export const getBusyWorkersWithCars = () => axios.get(`${API_BASE}/worker/busy`);
 
@@ -29,3 +27,8 @@ export const updateCar = (id, data) => axios.put(`${API_BASE}/cars/${id}`, data)
 export const deleteCar = (id) => axios.delete(`${API_BASE}/cars/${id}`);
 export const updateCarStatus = (id, status) =>
   axios.put(`${API_BASE}/cars/${id}/status`, { status });
+// ============================= CATE CAR (Loại xe) =============================
+export const getAllCateCars = () => axios.get(`${API_BASE}/catecar`);
+export const createCateCar = (data) => axios.post(`${API_BASE}/catecar/create`, data);
+export const updateCateCar = (id, data) => axios.put(`${API_BASE}/catecar/${id}`, data);
+export const deleteCateCar = (id) => axios.delete(`${API_BASE}/catecar/${id}`);

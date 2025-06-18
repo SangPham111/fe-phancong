@@ -2,12 +2,12 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'r
 import { useState, useEffect } from 'react';
 import AppBarComponent from './components/Appbar';
 import MainWorkersPage from './components/pages/MainWorkersPage';
-import SubWorkersPage from './components/pages/SubWorkersPage';
 import SupervisorsPage from './components/pages/SupervisorsPage';
 import CarsTodayPage from './components/pages/Home';
 import AddCarPage from './components/pages/AddCar';
 import ManageCarsPage from './components/pages/ManageCars';
 import AvailableWorkersPage from './components/pages/AvailableWorkersPage'
+import CateCarManager from './components/pages/CateCarManager';
 import { Box, TextField, Button, Typography, useMediaQuery, useTheme, Paper } from '@mui/material';
 
 const PASSWORD = 'otobathanh2025@';
@@ -85,14 +85,6 @@ function App() {
             }
           />
           <Route
-            path="/workers/sub"
-            element={
-              <ProtectedRoute>
-                <SubWorkersPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
             path="/supervisors"
             element={
               <ProtectedRoute>
@@ -117,13 +109,21 @@ function App() {
             }
           />
           <Route
-  path="/workers/available"
-  element={
-    <ProtectedRoute>
-      <AvailableWorkersPage />
-    </ProtectedRoute>
-  }
-/>
+            path="/workers/available"
+            element={
+              <ProtectedRoute>
+                <AvailableWorkersPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/catecars"
+            element={
+              <ProtectedRoute>
+                <CateCarManager />
+              </ProtectedRoute>
+            }
+          />
         </Routes>
       </Box>
     </Router>

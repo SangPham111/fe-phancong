@@ -28,8 +28,8 @@ const AppBarComponent = () => {
     { label: 'Xe trong ngày', path: '/cars' },
     { label: 'Quản lý xe', path: '/cars/manage' },
     { label: 'Thêm xe', path: '/cars/add' },
-    { label: 'Thợ chính', path: '/workers/main' },
-    { label: 'Thợ phụ', path: '/workers/sub' },
+    { label: 'Loại xe', path: '/catecars' },
+    { label: 'Thợ', path: '/workers/main' },
     { label: 'Thợ rảnh', path: '/workers/available' },
     { label: 'Giám sát', path: '/supervisors' },
   ];

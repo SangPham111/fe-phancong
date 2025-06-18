@@ -11,41 +11,40 @@ import {
   createCar,
   getAvailableWorkers,
   getAllSupervisors,
+  getAllCateCars,
 } from '../apis/index';
 
 const AddCar = ({ onSuccess }) => {
   const [formData, setFormData] = useState({
     plateNumber: '',
-    carType: '',
+    carType: null,
     deliveryTime: '',
-    mainWorker: '',
-    subWorker: '',
-    supervisor: '',
+    mainWorkers: [],
+    subWorkers: [],
+    supervisor: null,
   });
 
   const [availableWorkers, setAvailableWorkers] = useState([]);
   const [supervisors, setSupervisors] = useState([]);
+  const [cateCars, setCateCars] = useState([]);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [workerRes, supervisorRes] = await Promise.all([
+        const [workerRes, supervisorRes, cateCarRes] = await Promise.all([
           getAvailableWorkers(),
           getAllSupervisors(),
+          getAllCateCars(),
         ]);
-        console.log('Danh sách thợ:', workerRes.data);
         setAvailableWorkers(workerRes.data);
         setSupervisors(supervisorRes.data);
+        setCateCars(cateCarRes.data);
       } catch (error) {
         console.error('Lỗi khi lấy dữ liệu:', error);
       }
     };
     fetchData();
   }, []);
-
-  // ⚠ Sửa lại từ w.type ➝ w.role
-  const mainWorkers = availableWorkers.filter((w) => w.role === 'thợ chính');
-  const subWorkers = availableWorkers.filter((w) => w.role === 'thợ phụ');
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -54,19 +53,39 @@ const AddCar = ({ onSuccess }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.plateNumber || !formData.carType || !formData.deliveryTime) {
-      return alert('Vui lòng nhập đầy đủ thông tin bắt buộc');
-    }
+
+    const workers = [];
+
+    formData.mainWorkers.forEach((worker) => {
+      workers.push({ worker: worker._id, role: 'main' });
+    });
+
+    formData.subWorkers.forEach((worker) => {
+      const isAlreadyMain = formData.mainWorkers.some(
+        (main) => main._id === worker._id
+      );
+      if (!isAlreadyMain) {
+        workers.push({ worker: worker._id, role: 'sub' });
+      }
+    });
+
+    const carToCreate = {
+      plateNumber: formData.plateNumber,
+      carType: formData.carType?._id || null,
+      deliveryTime: formData.deliveryTime,
+      supervisor: formData.supervisor?._id || null,
+      workers,
+    };
 
     try {
-      await createCar(formData);
+      await createCar(carToCreate);
       setFormData({
         plateNumber: '',
-        carType: '',
+        carType: null,
         deliveryTime: '',
-        mainWorker: '',
-        subWorker: '',
-        supervisor: '',
+        mainWorkers: [],
+        subWorkers: [],
+        supervisor: null,
       });
       onSuccess && onSuccess();
     } catch (error) {
@@ -91,13 +110,17 @@ const AddCar = ({ onSuccess }) => {
           onChange={handleChange}
           required
         />
-        <TextField
-          label="Loại xe"
-          name="carType"
+
+        <Autocomplete
+          options={cateCars}
+          getOptionLabel={(option) => option.name || ''}
           value={formData.carType}
-          onChange={handleChange}
-          required
+          onChange={(e, value) =>
+            setFormData((prev) => ({ ...prev, carType: value }))
+          }
+          renderInput={(params) => <TextField {...params} label="Loại xe" required />}
         />
+
         <TextField
           label="Thời gian hẹn giao xe"
           name="deliveryTime"
@@ -108,51 +131,43 @@ const AddCar = ({ onSuccess }) => {
           required
         />
 
-        {/* Thợ chính */}
         <Autocomplete
-          options={mainWorkers}
+          multiple
+          options={availableWorkers.filter(
+            (w) => !formData.subWorkers.some((sub) => sub._id === w._id)
+          )}
           getOptionLabel={(option) => option.name || ''}
-          value={mainWorkers.find((w) => w._id === formData.mainWorker) || null}
+          value={formData.mainWorkers}
           onChange={(e, value) =>
-            setFormData((prev) => ({
-              ...prev,
-              mainWorker: value ? value._id : '',
-            }))
+            setFormData((prev) => ({ ...prev, mainWorkers: value }))
           }
-          openOnFocus
-          noOptionsText="Không có thợ nào đang rảnh"
-          renderInput={(params) => <TextField {...params} label="Thợ chính" />}
+          renderInput={(params) => (
+            <TextField {...params} label="Thợ chính (có thể chọn nhiều)" />
+          )}
         />
 
-        {/* Thợ phụ */}
         <Autocomplete
-          options={subWorkers}
+          multiple
+          options={availableWorkers.filter(
+            (w) => !formData.mainWorkers.some((main) => main._id === w._id)
+          )}
           getOptionLabel={(option) => option.name || ''}
-          value={subWorkers.find((w) => w._id === formData.subWorker) || null}
+          value={formData.subWorkers}
           onChange={(e, value) =>
-            setFormData((prev) => ({
-              ...prev,
-              subWorker: value ? value._id : '',
-            }))
+            setFormData((prev) => ({ ...prev, subWorkers: value }))
           }
-          openOnFocus
-          noOptionsText="Không có thợ nào đang rảnh"
-          renderInput={(params) => <TextField {...params} label="Thợ phụ" />}
+          renderInput={(params) => (
+            <TextField {...params} label="Thợ phụ (có thể chọn nhiều)" />
+          )}
         />
 
-        {/* Giám sát */}
         <Autocomplete
           options={supervisors}
           getOptionLabel={(option) => option.name || ''}
-          value={supervisors.find((s) => s._id === formData.supervisor) || null}
+          value={formData.supervisor}
           onChange={(e, value) =>
-            setFormData((prev) => ({
-              ...prev,
-              supervisor: value ? value._id : '',
-            }))
+            setFormData((prev) => ({ ...prev, supervisor: value }))
           }
-          openOnFocus
-          noOptionsText="Không tìm thấy giám sát"
           renderInput={(params) => <TextField {...params} label="Giám sát" />}
         />
 
