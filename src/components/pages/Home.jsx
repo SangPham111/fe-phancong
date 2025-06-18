@@ -96,7 +96,6 @@ const Home = () => {
                 <TableCell>Biển số</TableCell>
                 <TableCell>Loại xe</TableCell>
                 <TableCell>Nhận</TableCell>
-                <TableCell>Giao</TableCell>
                 <TableCell>Thợ chính</TableCell>
                 <TableCell>Thợ phụ</TableCell>
                 <TableCell>Giám sát</TableCell>
@@ -111,7 +110,6 @@ const Home = () => {
                     <TableCell>{car.plateNumber}</TableCell>
                     <TableCell>{car.carType?.name || '---'}</TableCell>
                     <TableCell>{car.currentTime}</TableCell>
-                    <TableCell>{car.deliveryTime}</TableCell>
                     <TableCell>{mainWorkers || '---'}</TableCell>
                     <TableCell>{subWorkers || '---'}</TableCell>
                     <TableCell>{car.supervisor?.name || '---'}</TableCell>

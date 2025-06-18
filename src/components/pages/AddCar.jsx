@@ -18,7 +18,6 @@ const AddCar = ({ onSuccess }) => {
   const [formData, setFormData] = useState({
     plateNumber: '',
     carType: null,
-    deliveryTime: '',
     mainWorkers: [],
     subWorkers: [],
     supervisor: null,
@@ -72,7 +71,6 @@ const AddCar = ({ onSuccess }) => {
     const carToCreate = {
       plateNumber: formData.plateNumber,
       carType: formData.carType?._id || null,
-      deliveryTime: formData.deliveryTime,
       supervisor: formData.supervisor?._id || null,
       workers,
     };
@@ -82,7 +80,6 @@ const AddCar = ({ onSuccess }) => {
       setFormData({
         plateNumber: '',
         carType: null,
-        deliveryTime: '',
         mainWorkers: [],
         subWorkers: [],
         supervisor: null,
@@ -119,16 +116,6 @@ const AddCar = ({ onSuccess }) => {
             setFormData((prev) => ({ ...prev, carType: value }))
           }
           renderInput={(params) => <TextField {...params} label="Loại xe" required />}
-        />
-
-        <TextField
-          label="Thời gian hẹn giao xe"
-          name="deliveryTime"
-          type="datetime-local"
-          value={formData.deliveryTime}
-          onChange={handleChange}
-          InputLabelProps={{ shrink: true }}
-          required
         />
 
         <Autocomplete

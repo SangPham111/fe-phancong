@@ -228,7 +228,6 @@ const ManageCars = () => {
                   <TableCell>Loại xe</TableCell>
                   <TableCell>Ngày nhận</TableCell>
                   <TableCell>Giờ nhận</TableCell>
-                  <TableCell>Thời gian giao</TableCell>
                   <TableCell>Thợ chính</TableCell>
                   <TableCell>Thợ phụ</TableCell>
                   <TableCell>Giám sát</TableCell>
@@ -244,7 +243,6 @@ const ManageCars = () => {
                     <TableCell>{car.carType?.name}</TableCell>
                     <TableCell>{car.currentDate}</TableCell>
                     <TableCell>{car.currentTime}</TableCell>
-                    <TableCell>{car.deliveryTime}</TableCell>
                     <TableCell>{getWorkerNames(car, 'main')}</TableCell>
                     <TableCell>{getWorkerNames(car, 'sub')}</TableCell>
                     <TableCell>{car.supervisor?.name || ''}</TableCell>
@@ -299,17 +297,6 @@ const ManageCars = () => {
                 <TextField {...params} label="Loại xe" required fullWidth />
               )}
               isOptionEqualToValue={(option, value) => option._id === value._id}
-            />
-
-            <TextField
-              label="Thời gian giao"
-              name="deliveryTime"
-              type="datetime-local"
-              value={editData.deliveryTime || ''}
-              onChange={handleChange}
-              InputLabelProps={{ shrink: true }}
-              required
-              fullWidth
             />
             <Autocomplete
               multiple
