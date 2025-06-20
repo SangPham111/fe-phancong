@@ -127,18 +127,24 @@ const Home = () => {
 
   useEffect(() => {
     const handleUpdate = () => {
-      fetchData();
+      fetchData(); // hoặc refreshAndFilterCars();
     };
-  
-    window.addEventListener('storage', handleUpdate); // nếu đổi từ tab khác
-    window.addEventListener('carStatusUpdated', handleUpdate); // nếu cùng tab
-  
+
+    const handleStorageEvent = (event) => {
+      if (event.key === 'carStatusUpdated') {
+        handleUpdate();
+      }
+    };
+
+    window.addEventListener('storage', handleStorageEvent);
+    window.addEventListener('carStatusUpdated', handleUpdate); // sự kiện nội bộ
+
     return () => {
-      window.removeEventListener('storage', handleUpdate);
+      window.removeEventListener('storage', handleStorageEvent);
       window.removeEventListener('carStatusUpdated', handleUpdate);
     };
   }, []);
-  
+
 
   const getWorkersByRole = (workers = []) => {
     const formatWorkers = (role) =>

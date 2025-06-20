@@ -7,7 +7,6 @@ import {
   updateCarStatusWithWorker,
   getAvailableWorkers,
   getAllCateCars,
-  getCarsByLocation,
   getAllLocations,
   getAllWorkers
 } from '../apis/index';
@@ -44,14 +43,13 @@ import {
   CardActions,
   Divider,
   CircularProgress,
+  Stack,
 } from '@mui/material';
 import {
   Edit,
   Delete,
   CheckCircle,
-  HourglassEmpty,
-  HourglassBottom,
-  HourglassTop,
+  CalendarMonth,
   Schedule,
   BuildCircle,
   LocationOn,
@@ -61,7 +59,6 @@ import {
   Build,
   Person,
   SwapHoriz,
-  CalendarMonth,
   Star,
   StarBorder,
   Shield,
@@ -103,8 +100,9 @@ const ManageCars = () => {
   const fetchCars = async () => {
     try {
       const res = await getAllCars();
-      setAllCars(res.data);
-      setCars(res.data);
+      const sortedCars = res.data.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+      setAllCars(sortedCars);
+      setCars(sortedCars);
     } catch (err) {
       console.error('Lỗi khi lấy danh sách xe:', err);
     }
@@ -183,19 +181,34 @@ const ManageCars = () => {
     }
   };
 
-  const handleLocationChange = (locationId) => {
+  const handleLocationChange = async (locationId) => {
     setSelectedLocation(locationId);
-    filterCars(locationId, selectedDate);
+    try {
+      const res = await getAllCars();
+      const sortedCars = res.data.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+      setAllCars(sortedCars);
+      filterCars(locationId, selectedDate, sortedCars);
+    } catch (error) {
+      console.error('Lỗi khi làm mới danh sách xe:', error);
+    }
   };
 
-  const handleDateChange = (newDate) => {
+  const handleDateChange = async (newDate) => {
     setSelectedDate(newDate);
-    filterCars(selectedLocation, newDate);
+    try {
+      const res = await getAllCars();
+      const sortedCars = res.data.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+      setAllCars(sortedCars);
+      filterCars(selectedLocation, newDate, sortedCars);
+    } catch (error) {
+      console.error('Lỗi khi làm mới danh sách xe:', error);
+    }
   };
 
-  const filterCars = (locationId, date) => {
-    let filteredCars = [...allCars];
-    
+  const filterCars = (locationId, date, carList) => {
+    const sourceCars = carList || allCars;
+    let filteredCars = [...sourceCars];
+
     if (locationId !== 'all') {
       filteredCars = filteredCars.filter(car => car.location?._id === locationId);
     }
@@ -249,7 +262,7 @@ const ManageCars = () => {
       'rescue': { icon: <LocalHospital />, label: 'Cứu hộ', color: 'error' },
       null: { icon: <Shield />, label: 'Chưa xác định', color: 'default' }
     };
-    
+
     const config = conditionConfig[condition] || conditionConfig[null];
     return (
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -364,62 +377,36 @@ const ManageCars = () => {
     if (needsWorker) {
       setStatusUpdateData({ car, newStatus, needsWorker: true });
       setSelectedNewWorker('');
-      fetchAvailableWorkers(); // Refresh danh sách thợ rảnh
+      fetchAvailableWorkers();
       setStatusUpdateOpen(true);
     } else {
       handleChangeStatus(car._id, newStatus);
     }
   };
 
-  // const handleChangeStatus = async (id, newStatus, newWorkerId = null) => {
-  //   try {
-  //     const res = await updateCarStatusWithWorker(id, newStatus, newWorkerId);
-  
-  //     // Cập nhật dữ liệu ở trang hiện tại
-  //     if (selectedLocation === 'all') {
-  //       fetchCars();
-  //     } else {
-  //       handleLocationChange(selectedLocation);
-  //     }
-  //     fetchAvailableWorkers();
-  
-  //     // 🔥 Trigger reload trên trang Home (cùng tab hoặc khác tab)
-  //     localStorage.setItem('carStatusUpdated', Date.now().toString());
-  //     window.dispatchEvent(new Event('carStatusUpdated')); // 👈 THÊM DÒNG NÀY
-  
-  //     setSnackbar({
-  //       open: true,
-  //       message: res.data.message || 'Cập nhật trạng thái thành công',
-  //       severity: 'success',
-  //     });
-  //   } catch (err) {
-  //     console.error('Lỗi khi cập nhật trạng thái xe:', err);
-  //     const errorMessage = err.response?.data?.message || 'Cập nhật trạng thái thất bại';
-  //     setSnackbar({
-  //       open: true,
-  //       message: errorMessage,
-  //       severity: 'error',
-  //     });
-  //   }
-  // };
-  
+  const refreshAndFilterCars = async () => {
+    try {
+      const res = await getAllCars();
+      const sortedCars = res.data.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+      setAllCars(sortedCars);
+      filterCars(selectedLocation, selectedDate, sortedCars);
+    } catch (error) {
+      console.error('Lỗi khi làm mới danh sách xe:', error);
+    }
+  };
+
   const handleChangeStatus = async (id, newStatus, newWorkerId = null) => {
     try {
-      setLoadingCarId(id); // Đánh dấu xe đang xử lý
-  
+      setLoadingCarId(id);
+
       const res = await updateCarStatusWithWorker(id, newStatus, newWorkerId);
-  
-      // Cập nhật dữ liệu ở trang hiện tại
-      if (selectedLocation === 'all') {
-        fetchCars();
-      } else {
-        handleLocationChange(selectedLocation);
-      }
+
+      await refreshAndFilterCars();
       fetchAvailableWorkers();
-  
+
       localStorage.setItem('carStatusUpdated', Date.now().toString());
       window.dispatchEvent(new Event('carStatusUpdated'));
-  
+
       setSnackbar({
         open: true,
         message: res.data.message || 'Cập nhật trạng thái thành công',
@@ -434,10 +421,10 @@ const ManageCars = () => {
         severity: 'error',
       });
     } finally {
-      setLoadingCarId(null); // Bỏ đánh dấu khi hoàn tất
+      setLoadingCarId(null);
     }
   };
-  
+
   const handleStatusUpdateConfirm = () => {
     const { car, newStatus } = statusUpdateData;
     const workerId = selectedNewWorker || null;
@@ -516,18 +503,21 @@ const ManageCars = () => {
 
       <CardActions sx={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-          {getAvailableStatusTransitions(car.status).map((status) => (
-            <Button
-              key={status}
-              size="small"
-              variant="outlined"
-              startIcon={renderStatusIcon(status)}
-              onClick={() => handleStatusChangeClick(car, status)}
-              sx={{ textTransform: 'none' }}
-            >
-              {getStatusConfig(status).label}
-            </Button>
-          ))}
+          {loadingCarId === car._id ? (
+            <CircularProgress size={24} />
+          ) : (
+            getAvailableStatusTransitions(car.status).map((status) => (
+              <Tooltip key={status} title={`Chuyển sang ${getStatusConfig(status).label}`}>
+                <IconButton
+                  size="small"
+                  color={getStatusConfig(status).color}
+                  onClick={() => handleStatusChangeClick(car, status)}
+                >
+                  {renderStatusIcon(status)}
+                </IconButton>
+              </Tooltip>
+            ))
+          )}
         </Box>
 
         <Box sx={{ display: 'flex', gap: 1 }}>
@@ -592,24 +582,24 @@ const ManageCars = () => {
               <TableCell>{car.deliveryTime || 'Chưa xác định'}</TableCell>
               <TableCell>{car.location?.name || 'Chưa xác định'}</TableCell>
               <TableCell>
-  <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-    {loadingCarId === car._id ? (
-      <CircularProgress size={24} />
-    ) : (
-      getAvailableStatusTransitions(car.status).map((status) => (
-        <Tooltip key={status} title={`Chuyển sang ${getStatusConfig(status).label}`}>
-          <IconButton
-            size="small"
-            color={getStatusConfig(status).color}
-            onClick={() => handleStatusChangeClick(car, status)}
-          >
-            {renderStatusIcon(status)}
-          </IconButton>
-        </Tooltip>
-      ))
-    )}
-  </Box>
-</TableCell>
+                <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                  {loadingCarId === car._id ? (
+                    <CircularProgress size={24} />
+                  ) : (
+                    getAvailableStatusTransitions(car.status).map((status) => (
+                      <Tooltip key={status} title={`Chuyển sang ${getStatusConfig(status).label}`}>
+                        <IconButton
+                          size="small"
+                          color={getStatusConfig(status).color}
+                          onClick={() => handleStatusChangeClick(car, status)}
+                        >
+                          {renderStatusIcon(status)}
+                        </IconButton>
+                      </Tooltip>
+                    ))
+                  )}
+                </Box>
+              </TableCell>
 
               <TableCell>
                 <Box sx={{ display: 'flex', gap: 0.5 }}>
@@ -643,45 +633,47 @@ const ManageCars = () => {
       </Typography>
 
       <Paper sx={{ p: 2, mb: 3 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
-          <LocationOn color="primary" />
-          <FormControl sx={{ minWidth: 200 }}>
-            <InputLabel>Lọc theo địa điểm</InputLabel>
-            <Select
-              value={selectedLocation}
-              onChange={(e) => handleLocationChange(e.target.value)}
-              label="Lọc theo địa điểm"
-            >
-              <MenuItem value="all">
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Typography variant="body2" fontWeight="bold">
-                    Tất cả địa điểm
-                  </Typography>
-                </Box>
-              </MenuItem>
-              {locations.map((location) => (
-                <MenuItem key={location._id} value={location._id}>
-                  {location.name}
+        <Stack spacing={2}>
+          
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <LocationOn color="action" />
+            <FormControl fullWidth>
+              <InputLabel>Lọc theo địa điểm</InputLabel>
+              <Select
+                value={selectedLocation}
+                onChange={(e) => handleLocationChange(e.target.value)}
+                label="Lọc theo địa điểm"
+              >
+                <MenuItem value="all">
+                  <Typography fontWeight="bold">Tất cả địa điểm</Typography>
                 </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+                {locations.map((location) => (
+                  <MenuItem key={location._id} value={location._id}>
+                    {location.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
 
-          <CalendarMonth color="primary" />
-          <LocalizationProvider dateAdapter={AdapterDayjs}>
-            <DatePicker
-              label="Lọc theo ngày"
-              value={selectedDate}
-              onChange={handleDateChange}
-              sx={{ minWidth: 200 }}
-              renderInput={(params) => <TextField {...params} fullWidth />}
-            />
-          </LocalizationProvider>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <CalendarMonth color="action" />
+            <LocalizationProvider dateAdapter={AdapterDayjs}>
+              <DatePicker
+                label="Lọc theo ngày"
+                value={selectedDate}
+                onChange={handleDateChange}
+                slotProps={{
+                  textField: { fullWidth: true },
+                }}
+              />
+            </LocalizationProvider>
+          </Box>
 
-          <Typography variant="body2" color="textSecondary">
-            Tổng cộng: {cars.length} xe
+          <Typography variant="body1">
+            <strong>Tổng cộng:</strong> {cars.length} xe
           </Typography>
-        </Box>
+        </Stack>
       </Paper>
 
       {isMobile ? (
@@ -926,37 +918,37 @@ const ManageCars = () => {
           </Button>
         </DialogActions>
       </Dialog>
-<Dialog open={confirmDialogOpen} onClose={() => setConfirmDialogOpen(false)}>
-  <DialogTitle>Xác thực để xoá xe</DialogTitle>
-  <DialogContent>
-    <TextField
-      type="password"
-      label="Nhập mật khẩu"
-      fullWidth
-      value={password}
-      onChange={(e) => setPassword(e.target.value)}
-      sx={{ mt: 2 }}
-    />
-  </DialogContent>
-  <DialogActions>
-    <Button onClick={() => setConfirmDialogOpen(false)}>Huỷ</Button>
-    <Button
-      variant="contained"
-      onClick={() => {
-        if (password === '123456@') {
-          markCarPasswordVerified();
-          setConfirmDialogOpen(false);
-          setPassword('');
-          confirmDelete(deleteTargetId);
-        } else {
-          alert('❌ Sai mật khẩu!');
-        }
-      }}
-    >
-      Xác nhận
-    </Button>
-  </DialogActions>
-</Dialog>
+      <Dialog open={confirmDialogOpen} onClose={() => setConfirmDialogOpen(false)}>
+        <DialogTitle>Xác thực để xoá xe</DialogTitle>
+        <DialogContent>
+          <TextField
+            type="password"
+            label="Nhập mật khẩu"
+            fullWidth
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            sx={{ mt: 2 }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirmDialogOpen(false)}>Huỷ</Button>
+          <Button
+            variant="contained"
+            onClick={() => {
+              if (password === '123456@') {
+                markCarPasswordVerified();
+                setConfirmDialogOpen(false);
+                setPassword('');
+                confirmDelete(deleteTargetId);
+              } else {
+                alert('❌ Sai mật khẩu!');
+              }
+            }}
+          >
+            Xác nhận
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Snackbar
         open={snackbar.open}
