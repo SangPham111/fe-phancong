@@ -30,29 +30,38 @@ const AppBarComponent = () => {
     { label: 'Thêm xe', path: '/cars/add' },
     { label: 'Loại xe', path: '/catecars' },
     { label: 'Thợ', path: '/workers/main' },
+    { label: 'Địa điểm', path: '/locations' },
     { label: 'Thợ rảnh', path: '/workers/available' },
     { label: 'Giám sát', path: '/supervisors' },
   ];
 
   const handleNavigate = (path) => {
     navigate(path);
-    setOpenDrawer(false); // Đóng drawer khi chọn menu
+    setOpenDrawer(false);
   };
 
   return (
     <>
-      {/* AppBar cố định trên cùng */}
       <AppBar
         position="fixed"
         sx={{
-          backgroundColor: '#1976d2',
+          backgroundColor: '#b71c1c',
           zIndex: (theme) => theme.zIndex.drawer + 1,
         }}
       >
         <Toolbar sx={{ display: 'flex', justifyContent: 'space-between' }}>
-          <Typography variant="h6" noWrap>
-            Quản lý
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+  <Box
+    component="img"
+    src="https://res.cloudinary.com/drbjrsm0s/image/upload/v1745463450/logo_ulbaie.png"
+    alt="Bá Thành Logo"
+    sx={{
+      height: 60,
+      width: 'auto',
+    }}
+  />
+</Box>
+
 
           {isMobile ? (
             <IconButton
@@ -79,45 +88,42 @@ const AppBarComponent = () => {
         </Toolbar>
       </AppBar>
 
-      {/* CHÈN TOOLBAR TRỐNG để đẩy nội dung bên dưới AppBar */}
       <Toolbar />
 
-      {/* Drawer cho mobile */}
-<Drawer
-  anchor="right"
-  open={openDrawer}
-  onClose={() => setOpenDrawer(false)}
-  PaperProps={{
-    sx: {
-      width: 250,
-      height: 'calc(100% - 64px)',
-      top: '64px',
-    },
-  }}
->
-  <Box
-    sx={{
-      width: '100%',
-      height: '100%',
-      overflowY: 'auto',
-    }}
-    role="presentation"
-    onClick={() => setOpenDrawer(false)}
-    onKeyDown={() => setOpenDrawer(false)}
-  >
-    <List>
-      {navItems.map((item) => (
-        <ListItem key={item.path} disablePadding>
-          <ListItemButton onClick={() => handleNavigate(item.path)}>
-            <ListItemText primary={item.label} />
-          </ListItemButton>
-        </ListItem>
-      ))}
-    </List>
-    <Divider />
-  </Box>
-</Drawer>
-
+      <Drawer
+        anchor="right"
+        open={openDrawer}
+        onClose={() => setOpenDrawer(false)}
+        PaperProps={{
+          sx: {
+            width: 250,
+            height: 'calc(100% - 64px)',
+            top: '64px',
+          },
+        }}
+      >
+        <Box
+          sx={{
+            width: '100%',
+            height: '100%',
+            overflowY: 'auto',
+          }}
+          role="presentation"
+          onClick={() => setOpenDrawer(false)}
+          onKeyDown={() => setOpenDrawer(false)}
+        >
+          <List>
+            {navItems.map((item) => (
+              <ListItem key={item.path} disablePadding>
+                <ListItemButton onClick={() => handleNavigate(item.path)}>
+                  <ListItemText primary={item.label} />
+                </ListItemButton>
+              </ListItem>
+            ))}
+          </List>
+          <Divider />
+        </Box>
+      </Drawer>
     </>
   );
 };

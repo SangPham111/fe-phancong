@@ -8,6 +8,7 @@ import AddCarPage from './components/pages/AddCar';
 import ManageCarsPage from './components/pages/ManageCars';
 import AvailableWorkersPage from './components/pages/AvailableWorkersPage'
 import CateCarManager from './components/pages/CateCarManager';
+import LocationManager from './components/pages/LocationManager';
 import { Box, TextField, Button, Typography, useMediaQuery, useTheme, Paper } from '@mui/material';
 
 const PASSWORD = 'otobathanh2025@';
@@ -124,7 +125,16 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+          path="/locations"
+          element={
+            <ProtectedRoute>
+              <LocationManager />
+            </ProtectedRoute>
+          }
+        />
         </Routes>
+        
       </Box>
     </Router>
   );

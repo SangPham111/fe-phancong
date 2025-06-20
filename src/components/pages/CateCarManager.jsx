@@ -9,6 +9,10 @@ import {
   ListItemText,
   IconButton,
   Paper,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -29,6 +33,10 @@ const CateCarManager = () => {
   const [editingId, setEditingId] = useState(null);
   const [editingName, setEditingName] = useState('');
 
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [password, setPassword] = useState('');
+  const [deleteTargetId, setDeleteTargetId] = useState(null);
+
   const fetchCateCars = async () => {
     try {
       setLoading(true);
@@ -44,6 +52,16 @@ const CateCarManager = () => {
   useEffect(() => {
     fetchCateCars();
   }, []);
+
+  const isPasswordVerified = () => {
+    const verifiedUntil = localStorage.getItem('catecar_verified_until');
+    return verifiedUntil && new Date(verifiedUntil) > new Date();
+  };
+
+  const markPasswordVerified = () => {
+    const expiry = new Date(Date.now() + 60 * 60 * 1000); // 1 giờ
+    localStorage.setItem('catecar_verified_until', expiry.toISOString());
+  };
 
   const handleAddCateCar = async () => {
     if (!name.trim()) return;
@@ -78,6 +96,15 @@ const CateCarManager = () => {
   };
 
   const handleDelete = async (id) => {
+    if (isPasswordVerified()) {
+      proceedDelete(id);
+    } else {
+      setDeleteTargetId(id);
+      setConfirmDialogOpen(true);
+    }
+  };
+
+  const proceedDelete = async (id) => {
     if (!window.confirm('Bạn có chắc muốn xoá loại xe này?')) return;
     try {
       await deleteCateCar(id);
@@ -155,7 +182,7 @@ const CateCarManager = () => {
                 <ListItemText
                   primary={cate.name}
                   primaryTypographyProps={{ fontSize: 16, fontWeight: 500 }}
-                  sx={{ pointerEvents: 'none' }} // ⛔ không cho click vào
+                  sx={{ pointerEvents: 'none' }}
                 />
               )}
             </ListItem>
@@ -168,6 +195,39 @@ const CateCarManager = () => {
           )}
         </List>
       </Paper>
+
+      {/* Dialog xác thực xoá */}
+      <Dialog open={confirmDialogOpen} onClose={() => setConfirmDialogOpen(false)}>
+        <DialogTitle>Xác thực để xoá</DialogTitle>
+        <DialogContent>
+          <TextField
+            type="password"
+            label="Nhập mật khẩu"
+            fullWidth
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            sx={{ mt: 2 }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirmDialogOpen(false)}>Huỷ</Button>
+          <Button
+            variant="contained"
+            onClick={() => {
+              if (password === '123456@') {
+                markPasswordVerified();
+                setConfirmDialogOpen(false);
+                setPassword('');
+                proceedDelete(deleteTargetId);
+              } else {
+                alert('❌ Sai mật khẩu!');
+              }
+            }}
+          >
+            Xác nhận
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

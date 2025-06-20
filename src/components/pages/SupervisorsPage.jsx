@@ -27,6 +27,11 @@ const SupervisorsPage = () => {
   const [editData, setEditData] = useState({ id: '', name: '', phone: '' });
   const [newSupervisor, setNewSupervisor] = useState({ name: '', phone: '' });
 
+  // Xác thực mật khẩu
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [password, setPassword] = useState('');
+  const [deleteTargetId, setDeleteTargetId] = useState(null);
+
   const fetchSupervisors = async () => {
     try {
       const res = await getAllSupervisors();
@@ -40,7 +45,26 @@ const SupervisorsPage = () => {
     fetchSupervisors();
   }, []);
 
+  const isPasswordVerified = () => {
+    const verifiedUntil = localStorage.getItem('verified_until');
+    return verifiedUntil && new Date(verifiedUntil) > new Date();
+  };
+
+  const markPasswordVerified = () => {
+    const expiry = new Date(Date.now() + 60 * 60 * 1000); // 1 giờ
+    localStorage.setItem('verified_until', expiry.toISOString());
+  };
+
   const handleDelete = async (id) => {
+    if (isPasswordVerified()) {
+      proceedDelete(id);
+    } else {
+      setDeleteTargetId(id);
+      setConfirmDialogOpen(true);
+    }
+  };
+
+  const proceedDelete = async (id) => {
     if (window.confirm('Bạn có chắc muốn xoá người giám sát này?')) {
       try {
         await deleteSupervisor(id);
@@ -128,6 +152,7 @@ const SupervisorsPage = () => {
         ))}
       </List>
 
+      {/* Dialog cập nhật */}
       <Dialog open={editOpen} onClose={() => setEditOpen(false)}>
         <DialogTitle>Cập nhật giám sát</DialogTitle>
         <DialogContent>
@@ -149,8 +174,42 @@ const SupervisorsPage = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Dialog xác thực xoá */}
+      <Dialog open={confirmDialogOpen} onClose={() => setConfirmDialogOpen(false)}>
+        <DialogTitle>Xác thực để xoá</DialogTitle>
+        <DialogContent>
+          <TextField
+            type="password"
+            label="Nhập mật khẩu"
+            fullWidth
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            sx={{ mt: 2 }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirmDialogOpen(false)}>Huỷ</Button>
+          <Button
+            variant="contained"
+            onClick={() => {
+              if (password === '123456@') {
+                markPasswordVerified();
+                setConfirmDialogOpen(false);
+                setPassword('');
+                proceedDelete(deleteTargetId);
+              } else {
+                alert('Sai mật khẩu!');
+              }
+            }}
+          >
+            Xác nhận
+          </Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 };
 
 export default SupervisorsPage;
+  

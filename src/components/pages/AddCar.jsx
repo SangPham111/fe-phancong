@@ -5,39 +5,60 @@ import {
   Box,
   Typography,
   Paper,
-  Autocomplete
+  Autocomplete,
+  MenuItem,
 } from '@mui/material';
 import {
   createCar,
   getAvailableWorkers,
   getAllSupervisors,
   getAllCateCars,
+  getCarByPlateNumber,
+  getAllLocations,
 } from '../apis/index';
+import { useNavigate } from 'react-router-dom';
+import dayjs from 'dayjs';
+import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 
 const AddCar = ({ onSuccess }) => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     plateNumber: '',
     carType: null,
     mainWorkers: [],
     subWorkers: [],
     supervisor: null,
+    location: null,
+    deliveryDate: null,
+    deliveryHour: '',
+    condition: '', // ✅ Thêm tình trạng xe
   });
 
   const [availableWorkers, setAvailableWorkers] = useState([]);
   const [supervisors, setSupervisors] = useState([]);
   const [cateCars, setCateCars] = useState([]);
+  const [locations, setLocations] = useState([]);
+
+  const hourOptions = Array.from({ length: 24 }, (_, i) => ({
+    label: `${i.toString().padStart(2, '0')}:00`,
+    value: i,
+  }));
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [workerRes, supervisorRes, cateCarRes] = await Promise.all([
-          getAvailableWorkers(),
-          getAllSupervisors(),
-          getAllCateCars(),
-        ]);
+        const [workerRes, supervisorRes, cateCarRes, locationRes] =
+          await Promise.all([
+            getAvailableWorkers(),
+            getAllSupervisors(),
+            getAllCateCars(),
+            getAllLocations(),
+          ]);
         setAvailableWorkers(workerRes.data);
         setSupervisors(supervisorRes.data);
         setCateCars(cateCarRes.data);
+        setLocations(locationRes.data);
       } catch (error) {
         console.error('Lỗi khi lấy dữ liệu:', error);
       }
@@ -45,9 +66,25 @@ const AddCar = ({ onSuccess }) => {
     fetchData();
   }, []);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+  const handlePlateChange = async (e) => {
+    const plate = e.target.value.toUpperCase();
+    setFormData((prev) => ({ ...prev, plateNumber: plate }));
+
+    if (plate.length >= 5) {
+      try {
+        const res = await getCarByPlateNumber(plate);
+        if (res.data) {
+          const foundCate = cateCars.find(
+            (c) => c._id === res.data.carType?._id
+          );
+          if (foundCate) {
+            setFormData((prev) => ({ ...prev, carType: foundCate }));
+          }
+        }
+      } catch (err) {
+        // Không cần xử lý nếu không tìm thấy
+      }
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -68,10 +105,21 @@ const AddCar = ({ onSuccess }) => {
       }
     });
 
+    const deliveryTime =
+      formData.deliveryDate && formData.deliveryHour !== ''
+        ? dayjs(formData.deliveryDate)
+            .hour(formData.deliveryHour)
+            .minute(0)
+            .format('DD-MM-YYYY HH') + '[h]'
+        : undefined;
+
     const carToCreate = {
       plateNumber: formData.plateNumber,
       carType: formData.carType?._id || null,
       supervisor: formData.supervisor?._id || null,
+      location: formData.location?._id || null,
+      deliveryTime,
+      condition: formData.condition || null, // ✅ Thêm vào gửi API
       workers,
     };
 
@@ -83,9 +131,17 @@ const AddCar = ({ onSuccess }) => {
         mainWorkers: [],
         subWorkers: [],
         supervisor: null,
+        location: null,
+        deliveryDate: null,
+        deliveryHour: '',
+        condition: '', // ✅ Reset
       });
       onSuccess && onSuccess();
+      navigate('/cars/manage');
     } catch (error) {
+      const errorMsg =
+        error.response?.data?.message || 'Đã xảy ra lỗi khi thêm xe';
+      alert(errorMsg);
       console.error('Lỗi khi thêm xe:', error);
     }
   };
@@ -104,8 +160,9 @@ const AddCar = ({ onSuccess }) => {
           label="Biển số xe"
           name="plateNumber"
           value={formData.plateNumber}
-          onChange={handleChange}
+          onChange={handlePlateChange}
           required
+          fullWidth
         />
 
         <Autocomplete
@@ -115,7 +172,9 @@ const AddCar = ({ onSuccess }) => {
           onChange={(e, value) =>
             setFormData((prev) => ({ ...prev, carType: value }))
           }
-          renderInput={(params) => <TextField {...params} label="Loại xe" required />}
+          renderInput={(params) => (
+            <TextField {...params} label="Loại xe" required />
+          )}
         />
 
         <Autocomplete
@@ -157,6 +216,71 @@ const AddCar = ({ onSuccess }) => {
           }
           renderInput={(params) => <TextField {...params} label="Giám sát" />}
         />
+
+        <Autocomplete
+          options={locations}
+          getOptionLabel={(option) => option.name || ''}
+          value={formData.location}
+          onChange={(e, value) =>
+            setFormData((prev) => ({ ...prev, location: value }))
+          }
+          renderInput={(params) => (
+            <TextField {...params} label="Địa điểm" required />
+          )}
+        />
+
+        {/* ✅ Tình trạng xe */}
+        <TextField
+          select
+          label="Tình trạng xe"
+          value={formData.condition}
+          onChange={(e) =>
+            setFormData((prev) => ({ ...prev, condition: e.target.value }))
+          }
+          fullWidth
+        >
+          <MenuItem value="">Mặc định (null)</MenuItem>
+          <MenuItem value="vip">VIP</MenuItem>
+          <MenuItem value="good">Tốt</MenuItem>
+          <MenuItem value="normal">Bình thường</MenuItem>
+          <MenuItem value="warranty">Bảo hành</MenuItem>
+          <MenuItem value="rescue">Cứu hộ</MenuItem>
+        </TextField>
+
+        <LocalizationProvider dateAdapter={AdapterDayjs}>
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <DatePicker
+              label="Ngày giao xe"
+              value={formData.deliveryDate}
+              onChange={(newDate) =>
+                setFormData((prev) => ({ ...prev, deliveryDate: newDate }))
+              }
+              format="DD-MM-YYYY"
+              slotProps={{
+                textField: { fullWidth: true },
+              }}
+            />
+
+            <TextField
+              select
+              label="Giờ giao xe"
+              value={formData.deliveryHour}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  deliveryHour: Number(e.target.value),
+                }))
+              }
+              fullWidth
+            >
+              {hourOptions.map((hour) => (
+                <MenuItem key={hour.value} value={hour.value}>
+                  {hour.label}
+                </MenuItem>
+              ))}
+            </TextField>
+          </Box>
+        </LocalizationProvider>
 
         <Button type="submit" variant="contained">
           Thêm xe
