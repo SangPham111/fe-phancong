@@ -7,7 +7,8 @@ export default async function handler(req, res) {
     method: req.method,
     headers: {
       ...req.headers,
-      host: undefined, // Gỡ host để tránh lỗi
+      host: undefined, // Loại bỏ header gây lỗi
+      'Content-Type': 'application/json',
     },
     body: ['GET', 'HEAD'].includes(req.method) ? undefined : JSON.stringify(req.body),
   };
@@ -17,9 +18,14 @@ export default async function handler(req, res) {
     const contentType = response.headers.get('content-type');
     const data = await (contentType?.includes('application/json') ? response.json() : response.text());
 
-    res.status(response.status);
-    contentType && res.setHeader('Content-Type', contentType);
-    res.send(data);
+    // Nếu data có dạng { success: true, data: [...] }, chỉ trả về phần data
+    if (typeof data === 'object' && data?.success && data?.data !== undefined) {
+      res.status(response.status).json(data.data);
+    } else {
+      res.status(response.status);
+      contentType && res.setHeader('Content-Type', contentType);
+      res.send(data);
+    }
   } catch (error) {
     console.error('Proxy error:', error);
     res.status(500).json({ message: 'Proxy error', error: error.message });
