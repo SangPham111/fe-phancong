@@ -51,7 +51,7 @@
 // src/api/api.js
 import axios from 'axios';
 
-const API_BASE = 'https://192.168.1.20:3000/api'; // Thay đổi nếu cần
+const API_BASE = 'http://192.168.1.20:3000/api'; // Thay đổi nếu cần
 
 // ============================= WORKER =============================
 export const getAllWorkers = () => axios.get(`${API_BASE}/worker`);
