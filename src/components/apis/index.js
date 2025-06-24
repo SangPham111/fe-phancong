@@ -93,7 +93,7 @@ export const getWorkingAndPendingCars = () => axios.get(`${API_BASE}/cars/workin
 export const getCarsByLocation = (locationId) => axios.get(`${API_BASE}/cars/by-location/${locationId}`).then(res => res.data);
 export const getOverdueCars = () => axios.get(`${API_BASE}/cars/overdue`).then(res => res.data);
 
-// ============================= CATE CAR =============================
+// ============================= CATE CAR (Loại xe) =============================
 export const getAllCateCars = () => axios.get(`${API_BASE}/catecar`).then(res => res.data);
 export const createCateCar = (data) => axios.post(`${API_BASE}/catecar/create`, data).then(res => res.data);
 export const updateCateCar = (id, data) => axios.put(`${API_BASE}/catecar/${id}`, data).then(res => res.data);
