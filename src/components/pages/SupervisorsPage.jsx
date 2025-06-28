@@ -27,7 +27,6 @@ const SupervisorsPage = () => {
   const [editData, setEditData] = useState({ id: '', name: '', phone: '' });
   const [newSupervisor, setNewSupervisor] = useState({ name: '', phone: '' });
 
-  // Xác thực mật khẩu
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [password, setPassword] = useState('');
   const [deleteTargetId, setDeleteTargetId] = useState(null);
@@ -51,7 +50,7 @@ const SupervisorsPage = () => {
   };
 
   const markPasswordVerified = () => {
-    const expiry = new Date(Date.now() + 60 * 60 * 1000); // 1 giờ
+    const expiry = new Date(Date.now() + 60 * 60 * 10000); // 10 giờ
     localStorage.setItem('verified_until', expiry.toISOString());
   };
 
@@ -109,20 +108,34 @@ const SupervisorsPage = () => {
   };
 
   return (
-    <div style={{ padding: 20 }}>
-      <Typography variant="h5" gutterBottom>
-        Danh sách giám sát
+    <Box p={3} maxWidth={600} mx="auto">
+      <Typography
+        variant="h5"
+        mb={3}
+        fontWeight="bold"
+        textAlign="center"
+        fontSize={24}
+      >
+        👷‍♂️ Danh sách giám sát
       </Typography>
 
       <Box
         component="form"
         onSubmit={handleAddSupervisor}
-        sx={{ display: 'flex', gap: 2, mb: 2 }}
+        sx={{
+          display: 'flex',
+          gap: 2,
+          mb: 3,
+          justifyContent: 'center',
+          flexWrap: 'wrap',
+        }}
       >
         <TextField
           label="Tên giám sát"
           value={newSupervisor.name}
-          onChange={(e) => setNewSupervisor({ ...newSupervisor, name: e.target.value })}
+          onChange={(e) =>
+            setNewSupervisor({ ...newSupervisor, name: e.target.value })
+          }
           required
         />
         <Button type="submit" variant="contained">
@@ -130,27 +143,37 @@ const SupervisorsPage = () => {
         </Button>
       </Box>
 
-      <List>
-        {supervisors.map((s) => (
-          <React.Fragment key={s._id}>
-            <ListItem
-              secondaryAction={
-                <>
-                  <IconButton edge="end" onClick={() => handleEditClick(s)}>
-                    <Edit />
-                  </IconButton>
-                  <IconButton edge="end" onClick={() => handleDelete(s._id)}>
-                    <Delete />
-                  </IconButton>
-                </>
-              }
-            >
-              {s.name}
-            </ListItem>
-            <Divider />
-          </React.Fragment>
-        ))}
-      </List>
+      {/* Danh sách có cuộn */}
+      <Box
+        sx={{
+          maxHeight: 400,
+          overflowY: 'auto',
+          borderRadius: 2,
+          border: '1px solid #ddd',
+        }}
+      >
+        <List>
+          {supervisors.map((s) => (
+            <React.Fragment key={s._id}>
+              <ListItem
+                secondaryAction={
+                  <>
+                    <IconButton edge="end" onClick={() => handleEditClick(s)}>
+                      <Edit />
+                    </IconButton>
+                    <IconButton edge="end" onClick={() => handleDelete(s._id)}>
+                      <Delete />
+                    </IconButton>
+                  </>
+                }
+              >
+                {s.name}
+              </ListItem>
+              <Divider />
+            </React.Fragment>
+          ))}
+        </List>
+      </Box>
 
       {/* Dialog cập nhật */}
       <Dialog open={editOpen} onClose={() => setEditOpen(false)}>
@@ -207,9 +230,8 @@ const SupervisorsPage = () => {
           </Button>
         </DialogActions>
       </Dialog>
-    </div>
+    </Box>
   );
 };
 
 export default SupervisorsPage;
-  

@@ -82,7 +82,7 @@ const LocationManager = () => {
   };
 
   const markPasswordVerified = () => {
-    const expiry = new Date(Date.now() + 60 * 60 * 1000); // 1 giờ
+    const expiry = new Date(Date.now() + 60 * 60 * 10000); // 10 giờ
     localStorage.setItem('location_verified_until', expiry.toISOString());
   };
 

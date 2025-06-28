@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   getAllCars,
   updateCar,
@@ -7,6 +7,7 @@ import {
   updateCarStatusWithWorker,
   getAvailableWorkers,
   getAllCateCars,
+  getCarsByLocation,
   getAllLocations,
   getAllWorkers
 } from '../apis/index';
@@ -42,14 +43,11 @@ import {
   CardContent,
   CardActions,
   Divider,
-  CircularProgress,
-  Stack,
 } from '@mui/material';
 import {
   Edit,
   Delete,
   CheckCircle,
-  CalendarMonth,
   Schedule,
   BuildCircle,
   LocationOn,
@@ -59,19 +57,10 @@ import {
   Build,
   Person,
   SwapHoriz,
-  Star,
-  StarBorder,
-  Shield,
-  ShieldOutlined,
-  LocalHospital,
-  LocalHospitalOutlined,
 } from '@mui/icons-material';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import dayjs from 'dayjs';
-
+import moment from 'moment';
 const ManageCars = () => {
+  const [filterDate, setFilterDate] = useState(null);
   const [cars, setCars] = useState([]);
   const [allCars, setAllCars] = useState([]);
   const [editOpen, setEditOpen] = useState(false);
@@ -85,14 +74,21 @@ const ManageCars = () => {
   const [carTypes, setCarTypes] = useState([]);
   const [locations, setLocations] = useState([]);
   const [selectedLocation, setSelectedLocation] = useState('all');
-  const [selectedDate, setSelectedDate] = useState(null);
   const [selectedNewWorker, setSelectedNewWorker] = useState('');
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [password, setPassword] = useState('');
   const [deleteTargetId, setDeleteTargetId] = useState(null);
-  const [loadingCarId, setLoadingCarId] = useState(null); // hoặc Set nếu nhiều xe đồng thời
+
+
+
+  // Danh sách xe sau khi lọc theo ngày nhận xe
+  const displayedCars = useMemo(() => {
+    if (!filterDate) return cars;
+    const selected = moment(filterDate).format('YYYY-MM-DD');
+    return cars.filter(car => car.currentDate === selected);
+  }, [cars, filterDate]);
 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -100,9 +96,8 @@ const ManageCars = () => {
   const fetchCars = async () => {
     try {
       const res = await getAllCars();
-      const sortedCars = res.data.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
-      setAllCars(sortedCars);
-      setCars(sortedCars);
+      setAllCars(res.data);
+      setCars(res.data);
     } catch (err) {
       console.error('Lỗi khi lấy danh sách xe:', err);
     }
@@ -116,14 +111,13 @@ const ManageCars = () => {
       console.error('Lỗi khi lấy danh sách địa điểm:', err);
     }
   };
-
   const isCarPasswordVerified = () => {
     const verifiedUntil = localStorage.getItem('car_verified_until');
     return verifiedUntil && new Date(verifiedUntil) > new Date();
   };
 
   const markCarPasswordVerified = () => {
-    const expiry = new Date(Date.now() + 60 * 60 * 1000); // 1 giờ
+    const expiry = new Date(Date.now() + 60 * 60 * 10000); // 10 giờ
     localStorage.setItem('car_verified_until', expiry.toISOString());
   };
 
@@ -155,6 +149,19 @@ const ManageCars = () => {
     { value: 'additional_repair', label: 'Sửa bổ sung', icon: <Build />, color: 'error' },
   ];
 
+  const CONDITION_OPTIONS = {
+    vip: { label: 'VIP', color: 'warning' },
+    good: { label: 'Tốt', color: 'success' },
+    normal: { label: 'Bình thường', color: 'default' },
+    warranty: { label: 'Bảo hành', color: 'info' },
+    rescue: { label: 'Cứu hộ', color: 'error' },
+    null: { label: 'Bình thường', color: 'default' }
+  };
+
+  const getConditionConfig = (condition) => {
+    return CONDITION_OPTIONS[condition] || CONDITION_OPTIONS.null;
+  };
+
   const getStatusConfig = (status) => {
     return STATUS_OPTIONS.find(option => option.value === status) || STATUS_OPTIONS[0];
   };
@@ -183,42 +190,22 @@ const ManageCars = () => {
 
   const handleLocationChange = async (locationId) => {
     setSelectedLocation(locationId);
-    try {
-      const res = await getAllCars();
-      const sortedCars = res.data.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
-      setAllCars(sortedCars);
-      filterCars(locationId, selectedDate, sortedCars);
-    } catch (error) {
-      console.error('Lỗi khi làm mới danh sách xe:', error);
+
+    if (locationId === 'all') {
+      setCars(allCars);
+    } else {
+      try {
+        const res = await getCarsByLocation(locationId);
+        setCars(res.data);
+      } catch (err) {
+        console.error('Lỗi khi lấy xe theo địa điểm:', err);
+        setSnackbar({
+          open: true,
+          message: 'Lỗi khi lọc xe theo địa điểm',
+          severity: 'error'
+        });
+      }
     }
-  };
-
-  const handleDateChange = async (newDate) => {
-    setSelectedDate(newDate);
-    try {
-      const res = await getAllCars();
-      const sortedCars = res.data.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
-      setAllCars(sortedCars);
-      filterCars(selectedLocation, newDate, sortedCars);
-    } catch (error) {
-      console.error('Lỗi khi làm mới danh sách xe:', error);
-    }
-  };
-
-  const filterCars = (locationId, date, carList) => {
-    const sourceCars = carList || allCars;
-    let filteredCars = [...sourceCars];
-
-    if (locationId !== 'all') {
-      filteredCars = filteredCars.filter(car => car.location?._id === locationId);
-    }
-
-    if (date) {
-      const selectedDateString = dayjs(date).format('YYYY-MM-DD');
-      filteredCars = filteredCars.filter(car => car.currentDate === selectedDateString);
-    }
-
-    setCars(filteredCars);
   };
 
   useEffect(() => {
@@ -253,27 +240,6 @@ const ManageCars = () => {
     return React.cloneElement(config.icon, { color: config.color });
   };
 
-  const renderCondition = (condition) => {
-    const conditionConfig = {
-      'vip': { icon: <Star />, label: 'VIP', color: 'warning' },
-      'good': { icon: <StarBorder />, label: 'Tốt', color: 'success' },
-      'normal': { icon: <ShieldOutlined />, label: 'Bình thường', color: 'default' },
-      'warranty': { icon: <LocalHospitalOutlined />, label: 'Bảo hành', color: 'info' },
-      'rescue': { icon: <LocalHospital />, label: 'Cứu hộ', color: 'error' },
-      null: { icon: <Shield />, label: 'Chưa xác định', color: 'default' }
-    };
-
-    const config = conditionConfig[condition] || conditionConfig[null];
-    return (
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        {React.cloneElement(config.icon, { color: config.color })}
-        <Typography variant="body2" color={config.color === 'default' ? 'textSecondary' : config.color}>
-          {config.label}
-        </Typography>
-      </Box>
-    );
-  };
-
   const handleEditClick = async (car) => {
     try {
       const availableRes = await getAvailableWorkers();
@@ -287,8 +253,21 @@ const ManageCars = () => {
 
       setWorkers(merged);
 
-      const mainWorkerIds = car.workers.filter((w) => w.role === 'main').map((w) => w.worker._id);
-      const subWorkerIds = car.workers.filter((w) => w.role === 'sub').map((w) => w.worker._id);
+      const mainWorkerIds = car.workers
+        .filter((w) => w.role === "main")
+        .map((w) => w.worker._id);
+      const subWorkerIds = car.workers
+        .filter((w) => w.role === "sub")
+        .map((w) => w.worker._id);
+
+      // 👇 Xử lý deliveryTime tách ra ngày và giờ
+      const momentDelivery = moment(car.deliveryTime, 'DD-MM-YYYY HH[h]');
+      const deliveryDate = momentDelivery.isValid()
+        ? momentDelivery.format('YYYY-MM-DD') // Phù hợp với type="date"
+        : '';
+      const deliveryHour = momentDelivery.isValid()
+        ? momentDelivery.format('HH') // Giờ dạng '00' đến '23'
+        : '';
 
       setEditData({
         ...car,
@@ -296,6 +275,8 @@ const ManageCars = () => {
         subWorkers: subWorkerIds,
         supervisor: car.supervisor?._id || '',
         carType: car.carType || null,
+        deliveryDate,
+        deliveryHour,
       });
 
       setEditOpen(true);
@@ -306,10 +287,14 @@ const ManageCars = () => {
 
   const handleEditSave = async () => {
     try {
+      // Gộp ngày và giờ lại theo định dạng yêu cầu
+      const formattedDate = moment(editData.deliveryDate, 'YYYY-MM-DD').format('DD-MM-YYYY');
+      const deliveryTime = `${formattedDate} ${editData.deliveryHour}h`;
+
       const updatedCar = {
         plateNumber: editData.plateNumber,
         carType: editData.carType?._id || '',
-        deliveryTime: editData.deliveryTime,
+        deliveryTime,
         supervisor: editData.supervisor || null,
         workers: [
           ...editData.mainWorkers.map((id) => ({ worker: id, role: 'main' })),
@@ -318,6 +303,7 @@ const ManageCars = () => {
       };
 
       await updateCar(editData._id, updatedCar);
+
       setEditOpen(false);
       fetchCars();
       fetchData();
@@ -350,6 +336,8 @@ const ManageCars = () => {
     }
   };
 
+
+  // Kiểm tra xem có thể chuyển trạng thái nào từ trạng thái hiện tại
   const getAvailableStatusTransitions = (currentStatus) => {
     const transitions = {
       'pending': ['working'],
@@ -364,6 +352,7 @@ const ManageCars = () => {
     return transitions[currentStatus] || [];
   };
 
+  // Kiểm tra xem có cần chọn thợ mới không
   const needsWorkerSelection = (currentStatus, newStatus) => {
     return (
       (currentStatus === 'done' && newStatus === 'waiting_wash') ||
@@ -375,37 +364,28 @@ const ManageCars = () => {
     const needsWorker = needsWorkerSelection(car.status, newStatus);
 
     if (needsWorker) {
+      // Mở dialog chọn thợ
       setStatusUpdateData({ car, newStatus, needsWorker: true });
       setSelectedNewWorker('');
-      fetchAvailableWorkers();
+      fetchAvailableWorkers(); // Refresh danh sách thợ rảnh
       setStatusUpdateOpen(true);
     } else {
+      // Cập nhật trạng thái trực tiếp
       handleChangeStatus(car._id, newStatus);
-    }
-  };
-
-  const refreshAndFilterCars = async () => {
-    try {
-      const res = await getAllCars();
-      const sortedCars = res.data.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
-      setAllCars(sortedCars);
-      filterCars(selectedLocation, selectedDate, sortedCars);
-    } catch (error) {
-      console.error('Lỗi khi làm mới danh sách xe:', error);
     }
   };
 
   const handleChangeStatus = async (id, newStatus, newWorkerId = null) => {
     try {
-      setLoadingCarId(id);
-
       const res = await updateCarStatusWithWorker(id, newStatus, newWorkerId);
 
-      await refreshAndFilterCars();
+      if (selectedLocation === 'all') {
+        fetchCars();
+      } else {
+        handleLocationChange(selectedLocation);
+      }
+      
       fetchAvailableWorkers();
-
-      localStorage.setItem('carStatusUpdated', Date.now().toString());
-      window.dispatchEvent(new Event('carStatusUpdated'));
 
       setSnackbar({
         open: true,
@@ -420,8 +400,6 @@ const ManageCars = () => {
         message: errorMessage,
         severity: 'error',
       });
-    } finally {
-      setLoadingCarId(null);
     }
   };
 
@@ -469,18 +447,21 @@ const ManageCars = () => {
             <Typography variant="body2" color="textSecondary">
               <strong>Loại xe:</strong> {car.carType?.name || 'Chưa xác định'}
             </Typography>
+            <Typography variant="body2" color="textSecondary" component="span">
+              <strong>Tình trạng:</strong>
+              <Chip
+                label={getConditionConfig(car.condition).label}
+                color={getConditionConfig(car.condition).color}
+                size="small"
+                sx={{ ml: 1 }}
+              />
+            </Typography>
             <Typography variant="body2" color="textSecondary">
               <strong>Thời gian giao:</strong> {car.deliveryTime || 'Chưa xác định'}
             </Typography>
             <Typography variant="body2" color="textSecondary">
               <strong>Địa điểm:</strong> {car.location?.name || 'Chưa xác định'}
             </Typography>
-            <Typography variant="body2" color="textSecondary">
-              <strong>Tình trạng:</strong>
-            </Typography>
-            <Box sx={{ ml: 1 }}>
-              {renderCondition(car.condition)}
-            </Box>
           </Grid>
           <Grid item xs={12} sm={6}>
             <Typography variant="body2" color="textSecondary">
@@ -503,21 +484,18 @@ const ManageCars = () => {
 
       <CardActions sx={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-          {loadingCarId === car._id ? (
-            <CircularProgress size={24} />
-          ) : (
-            getAvailableStatusTransitions(car.status).map((status) => (
-              <Tooltip key={status} title={`Chuyển sang ${getStatusConfig(status).label}`}>
-                <IconButton
-                  size="small"
-                  color={getStatusConfig(status).color}
-                  onClick={() => handleStatusChangeClick(car, status)}
-                >
-                  {renderStatusIcon(status)}
-                </IconButton>
-              </Tooltip>
-            ))
-          )}
+          {getAvailableStatusTransitions(car.status).map((status) => (
+            <Button
+              key={status}
+              size="small"
+              variant="outlined"
+              startIcon={renderStatusIcon(status)}
+              onClick={() => handleStatusChangeClick(car, status)}
+              sx={{ textTransform: 'none' }}
+            >
+              {getStatusConfig(status).label}
+            </Button>
+          ))}
         </Box>
 
         <Box sx={{ display: 'flex', gap: 1 }}>
@@ -540,53 +518,70 @@ const ManageCars = () => {
     </Card>
   );
 
-  const renderTable = () => (
-    <Paper sx={{ width: '100%', overflow: 'hidden' }}>
-      <Table stickyHeader>
-        <TableHead>
-          <TableRow>
-            <TableCell>Biển số</TableCell>
-            <TableCell>Loại xe</TableCell>
-            <TableCell>Trạng thái</TableCell>
-            <TableCell>Tình trạng</TableCell>
-            <TableCell>Thợ chính</TableCell>
-            <TableCell>Thợ phụ</TableCell>
-            <TableCell>Thời gian giao</TableCell>
-            <TableCell>Địa điểm</TableCell>
-            <TableCell>Chuyển trạng thái</TableCell>
-            <TableCell>Thao tác</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {cars.map((car) => (
-            <TableRow key={car._id}>
-              <TableCell>
-                <Typography variant="body2" fontWeight="bold" color="primary">
-                  {car.plateNumber}
-                </Typography>
-              </TableCell>
-              <TableCell>{car.carType?.name || 'Chưa xác định'}</TableCell>
-              <TableCell>
-                <Chip
-                  icon={renderStatusIcon(car.status)}
-                  label={getStatusConfig(car.status).label}
-                  color={getStatusConfig(car.status).color}
-                  size="small"
-                />
-              </TableCell>
-              <TableCell>
-                {renderCondition(car.condition)}
-              </TableCell>
-              <TableCell>{getWorkerNames(car, 'main')}</TableCell>
-              <TableCell>{getWorkerNames(car, 'sub')}</TableCell>
-              <TableCell>{car.deliveryTime || 'Chưa xác định'}</TableCell>
-              <TableCell>{car.location?.name || 'Chưa xác định'}</TableCell>
-              <TableCell>
-                <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                  {loadingCarId === car._id ? (
-                    <CircularProgress size={24} />
-                  ) : (
-                    getAvailableStatusTransitions(car.status).map((status) => (
+  const renderTable = (data) => {
+    // Nếu có filterDate, chỉ hiển thị xe có ngày nhận đúng ngày lọc
+    let filtered = data || cars;
+    if (filterDate) {
+      const selected = moment(filterDate).format('YYYY-MM-DD');
+      filtered = filtered.filter(car => {
+        if (!car.currentDate) return false;
+        return car.currentDate === selected;
+      });
+    }
+    const sortedCars = [...filtered].sort(
+      (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+    );
+
+    return (
+      <Paper sx={{ width: '100%', overflow: 'hidden' }}>
+        <Table stickyHeader>
+          <TableHead>
+            <TableRow>
+              <TableCell>Biển số</TableCell>
+              <TableCell>Loại xe</TableCell>
+              <TableCell>Tình trạng</TableCell>
+              <TableCell>Trạng thái</TableCell>
+              <TableCell>Thợ chính</TableCell>
+              <TableCell>Thợ phụ</TableCell>
+              <TableCell>Ngày nhận</TableCell>
+              <TableCell>Thời gian giao</TableCell>
+              <TableCell>Địa điểm</TableCell>
+              <TableCell>Chuyển trạng thái</TableCell>
+              <TableCell>Thao tác</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {sortedCars.map((car) => (
+              <TableRow key={car._id}>
+                <TableCell>
+                  <Typography variant="body2" fontWeight="bold" color="primary">
+                    {car.plateNumber}
+                  </Typography>
+                </TableCell>
+                <TableCell>{car.carType?.name || 'Chưa xác định'}</TableCell>
+                <TableCell>
+                  <Chip
+                    label={getConditionConfig(car.condition).label}
+                    color={getConditionConfig(car.condition).color}
+                    size="small"
+                  />
+                </TableCell>
+                <TableCell>
+                  <Chip
+                    icon={renderStatusIcon(car.status)}
+                    label={getStatusConfig(car.status).label}
+                    color={getStatusConfig(car.status).color}
+                    size="small"
+                  />
+                </TableCell>
+                <TableCell>{getWorkerNames(car, 'main')}</TableCell>
+                <TableCell>{getWorkerNames(car, 'sub')}</TableCell>
+                <TableCell>{car.currentDate || 'Chưa xác định'}</TableCell>
+                <TableCell>{car.deliveryTime || 'Chưa xác định'}</TableCell>
+                <TableCell>{car.location?.name || 'Chưa xác định'}</TableCell>
+                <TableCell>
+                  <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                    {getAvailableStatusTransitions(car.status).map((status) => (
                       <Tooltip key={status} title={`Chuyển sang ${getStatusConfig(status).label}`}>
                         <IconButton
                           size="small"
@@ -596,35 +591,35 @@ const ManageCars = () => {
                           {renderStatusIcon(status)}
                         </IconButton>
                       </Tooltip>
-                    ))
-                  )}
-                </Box>
-              </TableCell>
+                    ))}
+                  </Box>
+                </TableCell>
+                <TableCell>
+                  <Box sx={{ display: 'flex', gap: 0.5 }}>
+                    <IconButton
+                      size="small"
+                      color="primary"
+                      onClick={() => handleEditClick(car)}
+                    >
+                      <Edit />
+                    </IconButton>
+                    <IconButton
+                      size="small"
+                      color="error"
+                      onClick={() => handleDelete(car._id)}
+                    >
+                      <Delete />
+                    </IconButton>
+                  </Box>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </Paper>
+    );
+  };
 
-              <TableCell>
-                <Box sx={{ display: 'flex', gap: 0.5 }}>
-                  <IconButton
-                    size="small"
-                    color="primary"
-                    onClick={() => handleEditClick(car)}
-                  >
-                    <Edit />
-                  </IconButton>
-                  <IconButton
-                    size="small"
-                    color="error"
-                    onClick={() => handleDelete(car._id)}
-                  >
-                    <Delete />
-                  </IconButton>
-                </Box>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </Paper>
-  );
 
   return (
     <Box sx={{ p: { xs: 2, sm: 4 } }}>
@@ -632,12 +627,14 @@ const ManageCars = () => {
         Quản lý xe
       </Typography>
 
+      {/* Bộ lọc địa điểm và ngày giao xe */}
       <Paper sx={{ p: 2, mb: 3 }}>
-        <Stack spacing={2}>
-          
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <LocationOn color="action" />
-            <FormControl fullWidth>
+        <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+            <Typography variant="body2" fontWeight="bold">
+              Địa điểm
+            </Typography>
+            <FormControl sx={{ minWidth: 200 }} size="small">
               <InputLabel>Lọc theo địa điểm</InputLabel>
               <Select
                 value={selectedLocation}
@@ -645,7 +642,9 @@ const ManageCars = () => {
                 label="Lọc theo địa điểm"
               >
                 <MenuItem value="all">
-                  <Typography fontWeight="bold">Tất cả địa điểm</Typography>
+                  <Typography variant="body2" fontWeight="bold">
+                    Tất cả địa điểm
+                  </Typography>
                 </MenuItem>
                 {locations.map((location) => (
                   <MenuItem key={location._id} value={location._id}>
@@ -656,32 +655,59 @@ const ManageCars = () => {
             </FormControl>
           </Box>
 
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <CalendarMonth color="action" />
-            <LocalizationProvider dateAdapter={AdapterDayjs}>
-              <DatePicker
-                label="Lọc theo ngày"
-                value={selectedDate}
-                onChange={handleDateChange}
-                slotProps={{
-                  textField: { fullWidth: true },
-                }}
-              />
-            </LocalizationProvider>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+            <Typography variant="body2" fontWeight="bold">
+              Ngày nhận xe
+            </Typography>
+            <TextField
+              label="Lọc theo ngày nhận xe"
+              type="date"
+              size="small"
+              value={filterDate ? moment(filterDate).format('YYYY-MM-DD') : ''}
+              onChange={e => setFilterDate(e.target.value ? moment(e.target.value).toDate() : null)}
+              InputLabelProps={{ shrink: true }}
+            />
           </Box>
 
-          <Typography variant="body1">
-            <strong>Tổng cộng:</strong> {cars.length} xe
-          </Typography>
-        </Stack>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+            <Typography variant="body2" fontWeight="bold" sx={{ visibility: 'hidden' }}>
+              Xoá lọc ngày
+            </Typography>
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={() => setFilterDate(null)}
+              disabled={!filterDate}
+            >
+              Xoá lọc ngày
+            </Button>
+          </Box>
+
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+            <Typography variant="body2" fontWeight="bold">
+              Tổng cộng
+            </Typography>
+            <Typography variant="body2" color="textSecondary">
+              {displayedCars.length} xe
+            </Typography>
+          </Box>
+        </Box>
       </Paper>
 
+
+      {/* Hiển thị danh sách xe */}
       {isMobile ? (
         <Box>
-          {cars.map(renderCarCard)}
+          {[...displayedCars]
+            .sort((a, b) => {
+              const dateA = a.createdAt ? new Date(a.createdAt) : new Date(0);
+              const dateB = b.createdAt ? new Date(b.createdAt) : new Date(0);
+              return dateB - dateA; // sắp xếp mới nhất lên trước
+            })
+            .map(renderCarCard)}
         </Box>
       ) : (
-        renderTable()
+        renderTable(displayedCars)
       )}
 
       {/* Dialog cập nhật xe */}
@@ -701,12 +727,35 @@ const ManageCars = () => {
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
-                label="Thời gian giao"
-                name="deliveryTime"
-                value={editData.deliveryTime || ''}
-                onChange={handleChange}
+                label="Ngày giao xe (DD-MM-YYYY)"
+                type="date"
+                value={editData.deliveryDate || ''}
+                onChange={(e) =>
+                  setEditData((prev) => ({ ...prev, deliveryDate: e.target.value }))
+                }
+                InputLabelProps={{ shrink: true }}
               />
             </Grid>
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth>
+                <InputLabel>Giờ giao xe (HH)</InputLabel>
+                <Select
+                  value={editData.deliveryHour || ''}
+                  label="Giờ giao xe (HH)"
+                  onChange={(e) =>
+                    setEditData((prev) => ({ ...prev, deliveryHour: e.target.value }))
+                  }
+                >
+                  {[...Array(24).keys()].map((hour) => (
+                    <MenuItem key={hour} value={hour}>
+                      {hour}h
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+
+
             <Grid item xs={12} sm={6}>
               <Autocomplete
                 options={carTypes}

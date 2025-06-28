@@ -32,7 +32,7 @@ const AddCar = ({ onSuccess }) => {
     location: null,
     deliveryDate: null,
     deliveryHour: '',
-    condition: '', // ✅ Thêm tình trạng xe
+    condition: '',
   });
 
   const [availableWorkers, setAvailableWorkers] = useState([]);
@@ -90,6 +90,12 @@ const AddCar = ({ onSuccess }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    // ✅ Kiểm tra deliveryTime
+    if (!formData.deliveryDate || formData.deliveryHour === '') {
+      alert('Vui lòng chọn ngày và giờ giao xe');
+      return;
+    }
+
     const workers = [];
 
     formData.mainWorkers.forEach((worker) => {
@@ -105,13 +111,10 @@ const AddCar = ({ onSuccess }) => {
       }
     });
 
-    const deliveryTime =
-      formData.deliveryDate && formData.deliveryHour !== ''
-        ? dayjs(formData.deliveryDate)
-            .hour(formData.deliveryHour)
-            .minute(0)
-            .format('DD-MM-YYYY HH') + '[h]'
-        : undefined;
+    const deliveryTime = dayjs(formData.deliveryDate)
+      .hour(formData.deliveryHour)
+      .minute(0)
+      .format('DD-MM-YYYY HH') + 'h';
 
     const carToCreate = {
       plateNumber: formData.plateNumber,
@@ -119,7 +122,7 @@ const AddCar = ({ onSuccess }) => {
       supervisor: formData.supervisor?._id || null,
       location: formData.location?._id || null,
       deliveryTime,
-      condition: formData.condition || null, // ✅ Thêm vào gửi API
+      condition: formData.condition || null,
       workers,
     };
 
@@ -134,7 +137,7 @@ const AddCar = ({ onSuccess }) => {
         location: null,
         deliveryDate: null,
         deliveryHour: '',
-        condition: '', // ✅ Reset
+        condition: '',
       });
       onSuccess && onSuccess();
       navigate('/cars/manage');
@@ -147,108 +150,118 @@ const AddCar = ({ onSuccess }) => {
   };
 
   return (
-    <Paper elevation={3} sx={{ p: 2, mb: 4 }}>
+    <Paper elevation={3} sx={{ p: 4, mb: 4 }}>
       <Typography variant="h6" gutterBottom>
         Thêm xe mới
       </Typography>
       <Box
         component="form"
         onSubmit={handleSubmit}
-        sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}
+        sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}
       >
-        <TextField
-          label="Biển số xe"
-          name="plateNumber"
-          value={formData.plateNumber}
-          onChange={handlePlateChange}
-          required
-          fullWidth
-        />
+        {/* Thông tin xe */}
+        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', flexDirection: { xs: 'column', sm: 'row' } }}>
+          <TextField
+            label="Biển số xe"
+            name="plateNumber"
+            value={formData.plateNumber}
+            onChange={handlePlateChange}
+            required
+            fullWidth
+            sx={{ flex: 1 }}
+            helperText="Nhập đúng biển số, tự động nhận diện loại xe nếu có."
+          />
+          <Autocomplete
+            options={cateCars}
+            getOptionLabel={(option) => option.name || ''}
+            value={formData.carType}
+            onChange={(e, value) =>
+              setFormData((prev) => ({ ...prev, carType: value }))
+            }
+            renderInput={(params) => (
+              <TextField {...params} label="Loại xe" required helperText="Chọn loại xe" />
+            )}
+            sx={{ flex: 1 }}
+          />
+          <TextField
+            select
+            label="Tình trạng xe"
+            value={formData.condition}
+            onChange={(e) =>
+              setFormData((prev) => ({ ...prev, condition: e.target.value }))
+            }
+            fullWidth
+            sx={{ flex: 1 }}
+            helperText="Chọn tình trạng xe nếu cần"
+          >
+            <MenuItem value="">Mặc định (null)</MenuItem>
+            <MenuItem value="vip">VIP</MenuItem>
+            <MenuItem value="good">Tốt</MenuItem>
+            <MenuItem value="normal">Bình thường</MenuItem>
+            <MenuItem value="warranty">Bảo hành</MenuItem>
+            <MenuItem value="rescue">Cứu hộ</MenuItem>
+          </TextField>
+        </Box>
 
-        <Autocomplete
-          options={cateCars}
-          getOptionLabel={(option) => option.name || ''}
-          value={formData.carType}
-          onChange={(e, value) =>
-            setFormData((prev) => ({ ...prev, carType: value }))
-          }
-          renderInput={(params) => (
-            <TextField {...params} label="Loại xe" required />
-          )}
-        />
+        {/* Nhân sự */}
+        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', flexDirection: { xs: 'column', sm: 'row' } }}>
+          <Autocomplete
+            multiple
+            options={availableWorkers.filter(
+              (w) => !formData.subWorkers.some((sub) => sub._id === w._id)
+            )}
+            getOptionLabel={(option) => option.name || ''}
+            value={formData.mainWorkers}
+            onChange={(e, value) =>
+              setFormData((prev) => ({ ...prev, mainWorkers: value }))
+            }
+            renderInput={(params) => (
+              <TextField {...params} label="Thợ chính" helperText="Có thể chọn nhiều thợ chính" />
+            )}
+            sx={{ flex: 1 }}
+          />
+          <Autocomplete
+            multiple
+            options={availableWorkers.filter(
+              (w) => !formData.mainWorkers.some((main) => main._id === w._id)
+            )}
+            getOptionLabel={(option) => option.name || ''}
+            value={formData.subWorkers}
+            onChange={(e, value) =>
+              setFormData((prev) => ({ ...prev, subWorkers: value }))
+            }
+            renderInput={(params) => (
+              <TextField {...params} label="Thợ phụ" helperText="Có thể chọn nhiều thợ phụ" />
+            )}
+            sx={{ flex: 1 }}
+          />
+          <Autocomplete
+            options={supervisors}
+            getOptionLabel={(option) => option.name || ''}
+            value={formData.supervisor}
+            onChange={(e, value) =>
+              setFormData((prev) => ({ ...prev, supervisor: value }))
+            }
+            renderInput={(params) => <TextField {...params} label="Giám sát" helperText="Chọn giám sát viên" />}
+            sx={{ flex: 1 }}
+          />
+        </Box>
 
-        <Autocomplete
-          multiple
-          options={availableWorkers.filter(
-            (w) => !formData.subWorkers.some((sub) => sub._id === w._id)
-          )}
-          getOptionLabel={(option) => option.name || ''}
-          value={formData.mainWorkers}
-          onChange={(e, value) =>
-            setFormData((prev) => ({ ...prev, mainWorkers: value }))
-          }
-          renderInput={(params) => (
-            <TextField {...params} label="Thợ chính (có thể chọn nhiều)" />
-          )}
-        />
-
-        <Autocomplete
-          multiple
-          options={availableWorkers.filter(
-            (w) => !formData.mainWorkers.some((main) => main._id === w._id)
-          )}
-          getOptionLabel={(option) => option.name || ''}
-          value={formData.subWorkers}
-          onChange={(e, value) =>
-            setFormData((prev) => ({ ...prev, subWorkers: value }))
-          }
-          renderInput={(params) => (
-            <TextField {...params} label="Thợ phụ (có thể chọn nhiều)" />
-          )}
-        />
-
-        <Autocomplete
-          options={supervisors}
-          getOptionLabel={(option) => option.name || ''}
-          value={formData.supervisor}
-          onChange={(e, value) =>
-            setFormData((prev) => ({ ...prev, supervisor: value }))
-          }
-          renderInput={(params) => <TextField {...params} label="Giám sát" />}
-        />
-
-        <Autocomplete
-          options={locations}
-          getOptionLabel={(option) => option.name || ''}
-          value={formData.location}
-          onChange={(e, value) =>
-            setFormData((prev) => ({ ...prev, location: value }))
-          }
-          renderInput={(params) => (
-            <TextField {...params} label="Địa điểm" required />
-          )}
-        />
-
-        {/* ✅ Tình trạng xe */}
-        <TextField
-          select
-          label="Tình trạng xe"
-          value={formData.condition}
-          onChange={(e) =>
-            setFormData((prev) => ({ ...prev, condition: e.target.value }))
-          }
-          fullWidth
-        >
-          <MenuItem value="">Mặc định (null)</MenuItem>
-          <MenuItem value="vip">VIP</MenuItem>
-          <MenuItem value="good">Tốt</MenuItem>
-          <MenuItem value="normal">Bình thường</MenuItem>
-          <MenuItem value="warranty">Bảo hành</MenuItem>
-          <MenuItem value="rescue">Cứu hộ</MenuItem>
-        </TextField>
-
-        <LocalizationProvider dateAdapter={AdapterDayjs}>
-          <Box sx={{ display: 'flex', gap: 2 }}>
+        {/* Giao nhận */}
+        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', flexDirection: { xs: 'column', sm: 'row' } }}>
+          <Autocomplete
+            options={locations}
+            getOptionLabel={(option) => option.name || ''}
+            value={formData.location}
+            onChange={(e, value) =>
+              setFormData((prev) => ({ ...prev, location: value }))
+            }
+            renderInput={(params) => (
+              <TextField {...params} label="Địa điểm" required helperText="Chọn địa điểm nhận xe" />
+            )}
+            sx={{ flex: 1 }}
+          />
+          <LocalizationProvider dateAdapter={AdapterDayjs}>
             <DatePicker
               label="Ngày giao xe"
               value={formData.deliveryDate}
@@ -257,32 +270,34 @@ const AddCar = ({ onSuccess }) => {
               }
               format="DD-MM-YYYY"
               slotProps={{
-                textField: { fullWidth: true },
+                textField: { fullWidth: true, helperText: 'Chọn ngày giao xe' },
               }}
+              sx={{ flex: 1 }}
             />
+          </LocalizationProvider>
+          <TextField
+            select
+            label="Giờ giao xe"
+            value={formData.deliveryHour}
+            onChange={(e) =>
+              setFormData((prev) => ({
+                ...prev,
+                deliveryHour: Number(e.target.value),
+              }))
+            }
+            fullWidth
+            helperText="Chọn giờ giao xe"
+            sx={{ flex: 1 }}
+          >
+            {hourOptions.map((hour) => (
+              <MenuItem key={hour.value} value={hour.value}>
+                {hour.label}
+              </MenuItem>
+            ))}
+          </TextField>
+        </Box>
 
-            <TextField
-              select
-              label="Giờ giao xe"
-              value={formData.deliveryHour}
-              onChange={(e) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  deliveryHour: Number(e.target.value),
-                }))
-              }
-              fullWidth
-            >
-              {hourOptions.map((hour) => (
-                <MenuItem key={hour.value} value={hour.value}>
-                  {hour.label}
-                </MenuItem>
-              ))}
-            </TextField>
-          </Box>
-        </LocalizationProvider>
-
-        <Button type="submit" variant="contained">
+        <Button type="submit" variant="contained" sx={{ mt: 2, width: { xs: '100%', sm: 'auto' } }}>
           Thêm xe
         </Button>
       </Box>

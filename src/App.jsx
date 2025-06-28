@@ -1,3 +1,4 @@
+﻿import React from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import AppBarComponent from './components/Appbar';
@@ -12,7 +13,7 @@ import LocationManager from './components/pages/LocationManager';
 import { Box, TextField, Button, Typography, useMediaQuery, useTheme, Paper } from '@mui/material';
 
 const PASSWORD = 'otobathanh2025@';
-const EXPIRY_TIME = 60 * 60 * 1000; // 1 giờ
+const EXPIRY_TIME = 60 * 60 * 10000; // 1 giờ
 
 function isAuthenticated() {
   const saved = localStorage.getItem('authTime');
@@ -71,7 +72,7 @@ function App() {
   return (
     <Router>
       <AppBarComponent />
-      <Box sx={{ mt: `${appBarHeight}px`, minHeight: '100vh', backgroundColor: '#f5f5f5' }}>
+      <Box sx={{ minHeight: '100vh', backgroundColor: '#f5f5f5' }}>
         <Routes>
           <Route path="/" element={<Navigate to="/cars" />} />
           <Route path="/cars" element={<CarsTodayPage />} />

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import {
   Typography,
   Paper,
@@ -18,7 +18,6 @@ import {
   InputLabel,
 } from '@mui/material';
 import {
-  getAllCars,
   getWorkingAndPendingCars,
   getCarStats,
   getOverdueCars,
@@ -31,6 +30,7 @@ const Home = () => {
   const [carsByStatus, setCarsByStatus] = useState({});
   const [locations, setLocations] = useState([]);
   const [selectedLocation, setSelectedLocation] = useState('');
+  const [selectedSectionKey, setSelectedSectionKey] = useState('');
   const [stats, setStats] = useState({
     pending: 0,
     working: 0,
@@ -75,7 +75,8 @@ const Home = () => {
     };
 
     for (const key in carsByStatus) {
-      const filtered = filterByLocation(carsByStatus[key] || []);
+      const cars = (carsByStatus[key] || []).filter((car) => car.currentDate === todayISO);
+      const filtered = filterByLocation(cars);
       result[key] = filtered.length;
     }
 
@@ -84,67 +85,52 @@ const Home = () => {
 
   const fetchData = async () => {
     try {
-      const [resCars, resWorkingPending, resStats, resOverdue, resLocations] = await Promise.all([
-        getAllCars(),
+      const [resWorkingPending, resStats, resOverdue, resLocations] = await Promise.all([
         getWorkingAndPendingCars(),
         getCarStats(),
         getOverdueCars(),
         getAllLocations(),
       ]);
 
-      const allCars = resCars.data || [];
+      const carStatusData = resWorkingPending.data || {};
       const overdueRaw = resOverdue.data.cars || [];
 
-      const overdueWithFlag = overdueRaw.map((car) => ({
+      const todayCars = [];
+
+      Object.values(carStatusData).forEach((cars) => {
+        (cars || []).forEach((car) => {
+          if (car.currentDate === todayISO) {
+            todayCars.push(car);
+          }
+        });
+      });
+
+      const overdueIds = new Set(overdueRaw.map((car) => car._id));
+
+      const todayCarsWithLateFlag = todayCars.map((car) => ({
         ...car,
-        isLate: true,
+        isLate: overdueIds.has(car._id),
       }));
 
-      const overdueIds = new Set(overdueWithFlag.map((c) => c._id));
+      const overdueTodayCars = todayCarsWithLateFlag.filter((car) => car.isLate);
 
-      const todayCars = allCars
-        .filter((car) => car.currentDate === todayISO)
-        .map((car) => ({
-          ...car,
-          isLate: overdueIds.has(car._id),
-        }));
-
-      const filteredOverdue = overdueWithFlag.filter((car) => car.currentDate !== todayISO);
-
-      setLocations(resLocations.data || []);
-      setCarsToday(todayCars);
-      setOverdueCars(filteredOverdue);
-      setCarsByStatus(resWorkingPending.data || {});
+      setCarsToday(todayCarsWithLateFlag);
+      setOverdueCars(overdueTodayCars);
+      setCarsByStatus(carStatusData);
       setStats(resStats.data);
+      setLocations(resLocations.data || []);
     } catch (err) {
       console.error('Lỗi khi tải dữ liệu:', err);
     }
   };
 
   useEffect(() => {
-    fetchData();
+    const interval = setInterval(() => {
+      fetchData();
+    }, 1000);
+
+    return () => clearInterval(interval);
   }, []);
-
-  useEffect(() => {
-    const handleUpdate = () => {
-      fetchData(); // hoặc refreshAndFilterCars();
-    };
-
-    const handleStorageEvent = (event) => {
-      if (event.key === 'carStatusUpdated') {
-        handleUpdate();
-      }
-    };
-
-    window.addEventListener('storage', handleStorageEvent);
-    window.addEventListener('carStatusUpdated', handleUpdate); // sự kiện nội bộ
-
-    return () => {
-      window.removeEventListener('storage', handleStorageEvent);
-      window.removeEventListener('carStatusUpdated', handleUpdate);
-    };
-  }, []);
-
 
   const getWorkersByRole = (workers = []) => {
     const formatWorkers = (role) =>
@@ -179,13 +165,15 @@ const Home = () => {
           🕑 Nhận: {car.currentTime}
         </Typography>
         <Typography fontSize={22} mb={1} sx={{ whiteSpace: 'pre-line', color }}>
-          🛠️ Thợ chính:{'\n'}
+          🛠️ Thợ chính:
+          {'\n'}
           <Box component="span" sx={{ color: mainWorkers ? 'inherit' : '#d32f2f', fontWeight: mainWorkers ? 'normal' : 'bold' }}>
             {mainWorkers || 'Trống'}
           </Box>
         </Typography>
         <Typography fontSize={22} mb={1} sx={{ whiteSpace: 'pre-line', color }}>
-          🔧 Thợ phụ:{'\n'}
+          🔧 Thợ phụ:
+          {'\n'}
           <Box component="span" sx={{ color: subWorkers ? 'inherit' : '#d32f2f', fontWeight: subWorkers ? 'normal' : 'bold' }}>
             {subWorkers || 'Trống'}
           </Box>
@@ -244,25 +232,59 @@ const Home = () => {
   };
 
   return (
-    <Box sx={{ width: '100%', mt: { xs: '56px', sm: '64px' }, px: { xs: 1, sm: 2, md: 4 }, py: 2, backgroundColor: '#f9f9f9', minHeight: '100vh' }}>
+    <Box sx={{ width: '100%', mt: 0, px: { xs: 1, sm: 2, md: 4 }, py: 2, backgroundColor: '#f9f9f9', minHeight: '100vh' }}>
       <Typography variant={isMobile ? 'h5' : 'h4'} fontWeight="bold" gutterBottom>
         Danh sách xe trong ngày (
         <Box component="span" sx={{ color: '#d32f2f', fontWeight: 'bold', display: 'inline' }}>{todayDisplay}</Box>)
       </Typography>
 
-      <FormControl fullWidth sx={{ maxWidth: 300, mb: 3 }}>
-        <InputLabel>Chọn địa điểm</InputLabel>
-        <Select
-          value={selectedLocation}
-          label="Chọn địa điểm"
-          onChange={(e) => setSelectedLocation(e.target.value)}
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: 3 }}>
+        <FormControl
+          fullWidth
+          sx={{
+            maxWidth: 300,
+            minWidth: 200,
+            flexGrow: 1,
+            flexShrink: 0,
+          }}
         >
-          <MenuItem value="">Tất cả địa điểm</MenuItem>
-          {locations.map((loc) => (
-            <MenuItem key={loc._id} value={loc._id}>{loc.name}</MenuItem>
-          ))}
-        </Select>
-      </FormControl>
+          <InputLabel>Chọn địa điểm</InputLabel>
+          <Select
+            value={selectedLocation}
+            label="Chọn địa điểm"
+            onChange={(e) => setSelectedLocation(e.target.value)}
+          >
+            <MenuItem value="">Tất cả địa điểm</MenuItem>
+            {locations.map((loc) => (
+              <MenuItem key={loc._id} value={loc._id}>{loc.name}</MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+
+        <FormControl
+          fullWidth
+          sx={{
+            maxWidth: 300,
+            minWidth: 200,
+            flexGrow: 1,
+            flexShrink: 0,
+          }}
+        >
+          <InputLabel>Chọn mục hiển thị</InputLabel>
+          <Select
+            value={selectedSectionKey}
+            label="Chọn mục hiển thị"
+            onChange={(e) => setSelectedSectionKey(e.target.value)}
+          >
+            <MenuItem value="">Tất cả mục</MenuItem>
+            <MenuItem value="today">🗓️ Xe hôm nay</MenuItem>
+            <MenuItem value="late">⏰ Xe trễ hẹn</MenuItem>
+            {carSections.map((section) => (
+              <MenuItem key={section.key} value={section.key}>{section.label}</MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      </Box>
 
       <Paper elevation={1} sx={{ p: 2, mb: 3 }}>
         <Typography variant="h6" fontWeight="bold" gutterBottom>📊 Thống kê xe:</Typography>
@@ -279,35 +301,51 @@ const Home = () => {
 
       <Divider sx={{ mb: 3 }} />
 
-      {[{ title: '🗓️ Xe hôm nay:', data: carsToday }, { title: '⏰ Xe trễ hẹn:', data: overdueCars }].map(({ title, data }, idx) => (
-        <Box key={idx} sx={{ mt: idx === 0 ? 0 : 4 }}>
-          <Typography variant="h6" fontWeight="bold" gutterBottom>{title}</Typography>
-          {filterByLocation(data).length === 0 ? (
+      {(!selectedSectionKey || selectedSectionKey === 'today') && (
+        <Box sx={{ mt: 4 }}>
+          <Typography variant="h6" fontWeight="bold" gutterBottom>🗓️ Xe hôm nay:</Typography>
+          {filterByLocation(carsToday).length === 0 ? (
             <Typography>Không có xe nào.</Typography>
           ) : isMobile ? (
-            <Stack spacing={2}>{filterByLocation(data).map(renderCarCard)}</Stack>
+            <Stack spacing={2}>{filterByLocation(carsToday).map(renderCarCard)}</Stack>
           ) : (
-            <Paper elevation={2} sx={{ p: 2 }}>{renderCarTable(filterByLocation(data))}</Paper>
+            <Paper elevation={2} sx={{ p: 2 }}>{renderCarTable(filterByLocation(carsToday))}</Paper>
           )}
         </Box>
-      ))}
+      )}
 
-      {carSections.map(({ key, label }) => {
-        const cars = carsByStatus[key] || [];
-        const filtered = filterByLocation(cars);
-        return (
-          <Box key={key} sx={{ mt: 4 }}>
-            <Typography variant="h6" fontWeight="bold" gutterBottom>{label}</Typography>
-            {filtered.length === 0 ? (
-              <Typography>Không có xe nào.</Typography>
-            ) : isMobile ? (
-              <Stack spacing={2}>{filtered.map(renderCarCard)}</Stack>
-            ) : (
-              <Paper elevation={2} sx={{ p: 2 }}>{renderCarTable(filtered)}</Paper>
-            )}
-          </Box>
-        );
-      })}
+      {(!selectedSectionKey || selectedSectionKey === 'late') && (
+        <Box sx={{ mt: 4 }}>
+          <Typography variant="h6" fontWeight="bold" gutterBottom>⏰ Xe trễ hẹn:</Typography>
+          {filterByLocation(overdueCars).length === 0 ? (
+            <Typography>Không có xe nào.</Typography>
+          ) : isMobile ? (
+            <Stack spacing={2}>{filterByLocation(overdueCars).map(renderCarCard)}</Stack>
+          ) : (
+            <Paper elevation={2} sx={{ p: 2 }}>{renderCarTable(filterByLocation(overdueCars))}</Paper>
+          )}
+        </Box>
+      )}
+
+      {carSections
+        .filter(({ key }) => !selectedSectionKey || key === selectedSectionKey)
+        .map(({ key, label }) => {
+          const cars = carsByStatus[key] || [];
+          const carsTodayOnly = cars.filter((car) => car.currentDate === todayISO);
+          const filtered = filterByLocation(carsTodayOnly);
+          return (
+            <Box key={key} sx={{ mt: 4 }}>
+              <Typography variant="h6" fontWeight="bold" gutterBottom>{label}</Typography>
+              {filtered.length === 0 ? (
+                <Typography>Không có xe nào.</Typography>
+              ) : isMobile ? (
+                <Stack spacing={2}>{filtered.map(renderCarCard)}</Stack>
+              ) : (
+                <Paper elevation={2} sx={{ p: 2 }}>{renderCarTable(filtered)}</Paper>
+              )}
+            </Box>
+          );
+        })}
     </Box>
   );
 };

@@ -49,7 +49,7 @@ const WorkersPage = () => {
   };
 
   const markPasswordVerified = () => {
-    const expiry = new Date(Date.now() + 60 * 60 * 1000); // 1 giờ
+    const expiry = new Date(Date.now() + 60 * 60 * 10000); // 10 giờ
     localStorage.setItem('worker_verified_until', expiry.toISOString());
   };
 
@@ -95,14 +95,32 @@ const WorkersPage = () => {
   };
 
   return (
-    <Box sx={{ padding: { xs: 2, sm: 4 }, backgroundColor: '#f9f9f9', minHeight: '100vh' }}>
+    <Box
+      sx={{
+        p: 3,
+        maxWidth: 600,
+        mx: 'auto',
+        backgroundColor: '#f9f9f9',
+        minHeight: '100vh',
+        borderRadius: 2,
+      }}
+    >
       <Typography variant="h4" fontWeight="bold" gutterBottom sx={{ fontSize: 32 }}>
         🛠️ Danh sách thợ
       </Typography>
 
       <AddWorkerForm onSuccess={fetchWorkers} />
 
-      <List sx={{ mt: 3 }}>
+      <List
+        sx={{
+          mt: 3,
+          maxHeight: '650px', // hoặc giá trị khác tùy bạn
+          overflowY: 'auto',
+          backgroundColor: '#fff',
+          borderRadius: 2,
+          boxShadow: 1,
+        }}
+      >
         {workers.map((w) => (
           <React.Fragment key={w._id}>
             <ListItem

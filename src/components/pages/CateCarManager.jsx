@@ -59,7 +59,7 @@ const CateCarManager = () => {
   };
 
   const markPasswordVerified = () => {
-    const expiry = new Date(Date.now() + 60 * 60 * 1000); // 1 giờ
+    const expiry = new Date(Date.now() + 60 * 60 * 10000); // 10 giờ
     localStorage.setItem('catecar_verified_until', expiry.toISOString());
   };
 
@@ -139,7 +139,7 @@ const CateCarManager = () => {
         </Button>
       </Box>
 
-      <Paper elevation={4} sx={{ maxHeight: 400, overflowY: 'auto', borderRadius: 2 }}>
+      <Paper elevation={4} sx={{ maxHeight: 680, overflowY: 'auto', borderRadius: 2 }}>
         <List>
           {cateCars.map((cate) => (
             <ListItem

@@ -28,7 +28,13 @@ const AddWorkerForm = ({ onSuccess }) => {
     <Box
       component="form"
       onSubmit={handleSubmit}
-      sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mt: 2 }}
+      sx={{
+        display: 'flex',
+        gap: 2,
+        flexWrap: 'wrap',
+        mt: 2,
+        justifyContent: 'center',
+      }}
     >
       <TextField
         label="Tên thợ"
