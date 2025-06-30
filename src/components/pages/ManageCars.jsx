@@ -57,7 +57,9 @@ import {
   Build,
   Person,
   SwapHoriz,
+  History,
 } from '@mui/icons-material';
+import { Link } from 'react-router-dom';
 import moment from 'moment';
 const ManageCars = () => {
   const [filterDate, setFilterDate] = useState(null);
@@ -384,7 +386,7 @@ const ManageCars = () => {
       } else {
         handleLocationChange(selectedLocation);
       }
-      
+
       fetchAvailableWorkers();
 
       setSnackbar({
@@ -594,6 +596,7 @@ const ManageCars = () => {
                     ))}
                   </Box>
                 </TableCell>
+
                 <TableCell>
                   <Box sx={{ display: 'flex', gap: 0.5 }}>
                     <IconButton
@@ -603,12 +606,22 @@ const ManageCars = () => {
                     >
                       <Edit />
                     </IconButton>
+
                     <IconButton
                       size="small"
                       color="error"
                       onClick={() => handleDelete(car._id)}
                     >
                       <Delete />
+                    </IconButton>
+
+                    <IconButton
+                      size="small"
+                      color="secondary"
+                      component={Link}
+                      to={`/cars/${car._id}/history`}
+                    >
+                      <History />
                     </IconButton>
                   </Box>
                 </TableCell>

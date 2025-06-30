@@ -107,7 +107,7 @@ const AppBarComponent = () => {
                   fontSize: '1.5rem',
                 }}
               >
-                🚨 <strong>THÔNG BÁO:</strong> Mới cập nhật thêm phần lọc danh sách hiển thị xe trong hôm nay. 🚗🛠️
+                🚨 <strong>THÔNG BÁO:</strong> Mới cập nhật thêm phần xe trễ hẹn 🚗🛠️
               </Typography>
             </Box>
           )}

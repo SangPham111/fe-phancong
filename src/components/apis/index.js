@@ -63,3 +63,7 @@ export const getLocationById = (id) => axios.get(`${API_BASE}/locations/${id}`);
 export const createLocation = (data) => axios.post(`${API_BASE}/locations`, data);
 export const updateLocation = (id, data) => axios.put(`${API_BASE}/locations/${id}`, data);
 export const deleteLocation = (id) => axios.delete(`${API_BASE}/locations/${id}`);
+
+// ============================= HISTORY =============================
+export const getCarWorkerHistory = (id) =>
+  axios.get(`${API_BASE}/cars/${id}/workers/history`);

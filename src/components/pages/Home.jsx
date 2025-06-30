@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Typography,
   Paper,
@@ -105,17 +105,21 @@ const Home = () => {
         });
       });
 
+      // Gắn cờ isLate cho xe hôm nay
       const overdueIds = new Set(overdueRaw.map((car) => car._id));
-
       const todayCarsWithLateFlag = todayCars.map((car) => ({
         ...car,
         isLate: overdueIds.has(car._id),
       }));
 
-      const overdueTodayCars = todayCarsWithLateFlag.filter((car) => car.isLate);
+      // Gắn cờ isLate cho tất cả xe trễ hẹn (overdueRaw)
+      const overdueCarsWithLateFlag = overdueRaw.map((car) => ({
+        ...car,
+        isLate: true,
+      }));
 
       setCarsToday(todayCarsWithLateFlag);
-      setOverdueCars(overdueTodayCars);
+      setOverdueCars(overdueCarsWithLateFlag); // Sửa ở đây: luôn in ra tất cả xe trễ hẹn
       setCarsByStatus(carStatusData);
       setStats(resStats.data);
       setLocations(resLocations.data || []);
@@ -296,6 +300,7 @@ const Home = () => {
           <Typography>🚚 Chờ giao: <b>{getFilteredStats().waiting_handover}</b></Typography>
           <Typography>📦 Đã giao: <b>{getFilteredStats().delivered}</b></Typography>
           <Typography>🔁 Bổ sung: <b>{getFilteredStats().additional_repair}</b></Typography>
+          <Typography>⏰ Trễ hẹn: <b>{filterByLocation(overdueCars).length}</b></Typography>
         </Stack>
       </Paper>
 

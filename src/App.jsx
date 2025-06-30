@@ -10,6 +10,7 @@ import ManageCarsPage from './components/pages/ManageCars';
 import AvailableWorkersPage from './components/pages/AvailableWorkersPage'
 import CateCarManager from './components/pages/CateCarManager';
 import LocationManager from './components/pages/LocationManager';
+import CarWorkerHistoryPage from "./components/pages/CarWorkerHistoryPage";
 import { Box, TextField, Button, Typography, useMediaQuery, useTheme, Paper } from '@mui/material';
 
 const PASSWORD = 'otobathanh2025@';
@@ -127,15 +128,23 @@ function App() {
             }
           />
           <Route
-          path="/locations"
-          element={
-            <ProtectedRoute>
-              <LocationManager />
-            </ProtectedRoute>
-          }
-        />
+            path="/locations"
+            element={
+              <ProtectedRoute>
+                <LocationManager />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/cars/:id/history"
+            element={
+              <ProtectedRoute>
+                <CarWorkerHistoryPage />
+              </ProtectedRoute>
+            }
+          />
         </Routes>
-        
+
       </Box>
     </Router>
   );
