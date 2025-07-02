@@ -58,9 +58,13 @@ import {
   Person,
   SwapHoriz,
   History,
+  Error,
+  Lock,
 } from '@mui/icons-material';
 import { Link } from 'react-router-dom';
 import moment from 'moment';
+import DirectionsCarIcon from '@mui/icons-material/DirectionsCar';
+
 const ManageCars = () => {
   const [filterDate, setFilterDate] = useState(null);
   const [cars, setCars] = useState([]);
@@ -83,7 +87,7 @@ const ManageCars = () => {
   const [password, setPassword] = useState('');
   const [deleteTargetId, setDeleteTargetId] = useState(null);
 
-
+  const ErrorIcon = Error;
 
   // Danh sách xe sau khi lọc theo ngày nhận xe
   const displayedCars = useMemo(() => {
@@ -430,18 +434,24 @@ const ManageCars = () => {
   };
 
   const renderCarCard = (car) => (
-    <Card key={car._id} sx={{ mb: 2 }}>
+    <Card key={car._id} sx={{ mb: 2, borderRadius: 3, boxShadow: 3, border: (car.isLate || car.overdue) ? '2px solid #f44336' : undefined }}>
       <CardContent>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-          <Typography variant="h6" color="primary">
-            {car.plateNumber}
-          </Typography>
-          <Chip
-            icon={renderStatusIcon(car.status)}
-            label={getStatusConfig(car.status).label}
-            color={getStatusConfig(car.status).color}
-            size="small"
-          />
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            {(car.isLate || car.overdue) && <Tooltip title="Xe trễ hẹn"><ErrorIcon color="error" fontSize="medium" /></Tooltip>}
+            <Typography variant="h6" color={(car.isLate || car.overdue) ? 'error' : 'primary'}>
+              {car.plateNumber}
+            </Typography>
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Chip
+              icon={renderStatusIcon(car.status)}
+              label={getStatusConfig(car.status).label}
+              color={getStatusConfig(car.status).color}
+              size="small"
+            />
+            {(car.isLate || car.overdue) && <Chip label="Trễ hẹn" color="error" size="small" icon={<ErrorIcon />} />}
+          </Box>
         </Box>
 
         <Grid container spacing={2}>
@@ -484,8 +494,8 @@ const ManageCars = () => {
 
       <Divider />
 
-      <CardActions sx={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
-        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+      <CardActions sx={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: 1, px: 1 }}>
+        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', flex: 1 }}>
           {getAvailableStatusTransitions(car.status).map((status) => (
             <Button
               key={status}
@@ -493,28 +503,51 @@ const ManageCars = () => {
               variant="outlined"
               startIcon={renderStatusIcon(status)}
               onClick={() => handleStatusChangeClick(car, status)}
-              sx={{ textTransform: 'none' }}
+              sx={{ textTransform: 'none', minWidth: 0, px: 1 }}
             >
               {getStatusConfig(status).label}
             </Button>
           ))}
         </Box>
 
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          <IconButton
-            size="small"
-            color="primary"
-            onClick={() => handleEditClick(car)}
-          >
-            <Edit />
-          </IconButton>
-          <IconButton
-            size="small"
-            color="error"
-            onClick={() => handleDelete(car._id)}
-          >
-            <Delete />
-          </IconButton>
+        <Box sx={{ display: 'flex', gap: 0.5 }}>
+          <Tooltip title="Sửa xe">
+            <span>
+              <IconButton
+                size="small"
+                color="primary"
+                onClick={() => handleEditClick(car)}
+                sx={{ borderRadius: 2 }}
+              >
+                <Edit />
+              </IconButton>
+            </span>
+          </Tooltip>
+          <Tooltip title="Xoá xe">
+            <span>
+              <IconButton
+                size="small"
+                color="error"
+                onClick={() => handleDelete(car._id)}
+                sx={{ borderRadius: 2 }}
+              >
+                <Delete />
+              </IconButton>
+            </span>
+          </Tooltip>
+          <Tooltip title="Lịch sử xe">
+            <span>
+              <IconButton
+                size="small"
+                color="secondary"
+                component={Link}
+                to={`/cars/${car._id}/history`}
+                sx={{ borderRadius: 2 }}
+              >
+                <History />
+              </IconButton>
+            </span>
+          </Tooltip>
         </Box>
       </CardActions>
     </Card>
@@ -535,98 +568,128 @@ const ManageCars = () => {
     );
 
     return (
-      <Paper sx={{ width: '100%', overflow: 'hidden' }}>
-        <Table stickyHeader>
+      <Paper sx={{ width: '100%', overflowX: 'auto', borderRadius: 3, boxShadow: 3 }}>
+        <Table stickyHeader sx={{ minWidth: 1100 }}>
           <TableHead>
-            <TableRow>
-              <TableCell>Biển số</TableCell>
-              <TableCell>Loại xe</TableCell>
-              <TableCell>Tình trạng</TableCell>
-              <TableCell>Trạng thái</TableCell>
-              <TableCell>Thợ chính</TableCell>
-              <TableCell>Thợ phụ</TableCell>
-              <TableCell>Ngày nhận</TableCell>
-              <TableCell>Thời gian giao</TableCell>
-              <TableCell>Địa điểm</TableCell>
-              <TableCell>Chuyển trạng thái</TableCell>
-              <TableCell>Thao tác</TableCell>
+            <TableRow sx={{ background: '#f5f5f5' }}>
+              <TableCell sx={{ fontWeight: 'bold', background: '#f5f5f5' }}>Biển số</TableCell>
+              <TableCell sx={{ fontWeight: 'bold', background: '#f5f5f5' }}>Loại xe</TableCell>
+              <TableCell sx={{ fontWeight: 'bold', background: '#f5f5f5' }}>Tình trạng</TableCell>
+              <TableCell sx={{ fontWeight: 'bold', background: '#f5f5f5' }}>Trạng thái</TableCell>
+              <TableCell sx={{ fontWeight: 'bold', background: '#f5f5f5' }}>Thợ chính</TableCell>
+              <TableCell sx={{ fontWeight: 'bold', background: '#f5f5f5' }}>Thợ phụ</TableCell>
+              <TableCell sx={{ fontWeight: 'bold', background: '#f5f5f5' }}>Ngày nhận</TableCell>
+              <TableCell sx={{ fontWeight: 'bold', background: '#f5f5f5' }}>Thời gian giao</TableCell>
+              <TableCell sx={{ fontWeight: 'bold', background: '#f5f5f5' }}>Địa điểm</TableCell>
+              <TableCell sx={{ fontWeight: 'bold', background: '#f5f5f5' }}>Chuyển trạng thái</TableCell>
+              <TableCell sx={{ fontWeight: 'bold', background: '#f5f5f5' }}>Thao tác</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {sortedCars.map((car) => (
-              <TableRow key={car._id}>
-                <TableCell>
-                  <Typography variant="body2" fontWeight="bold" color="primary">
-                    {car.plateNumber}
-                  </Typography>
-                </TableCell>
-                <TableCell>{car.carType?.name || 'Chưa xác định'}</TableCell>
-                <TableCell>
-                  <Chip
-                    label={getConditionConfig(car.condition).label}
-                    color={getConditionConfig(car.condition).color}
-                    size="small"
-                  />
-                </TableCell>
-                <TableCell>
-                  <Chip
-                    icon={renderStatusIcon(car.status)}
-                    label={getStatusConfig(car.status).label}
-                    color={getStatusConfig(car.status).color}
-                    size="small"
-                  />
-                </TableCell>
-                <TableCell>{getWorkerNames(car, 'main')}</TableCell>
-                <TableCell>{getWorkerNames(car, 'sub')}</TableCell>
-                <TableCell>{car.currentDate || 'Chưa xác định'}</TableCell>
-                <TableCell>{car.deliveryTime || 'Chưa xác định'}</TableCell>
-                <TableCell>{car.location?.name || 'Chưa xác định'}</TableCell>
-                <TableCell>
-                  <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                    {getAvailableStatusTransitions(car.status).map((status) => (
-                      <Tooltip key={status} title={`Chuyển sang ${getStatusConfig(status).label}`}>
-                        <IconButton
-                          size="small"
-                          color={getStatusConfig(status).color}
-                          onClick={() => handleStatusChangeClick(car, status)}
-                        >
-                          {renderStatusIcon(status)}
-                        </IconButton>
+            {sortedCars.map((car, idx) => {
+              const isLate = car.isLate || car.overdue;
+              return (
+                <TableRow
+                  key={car._id}
+                  sx={{
+                    backgroundColor: isLate ? '#ffebee' : (idx % 2 === 0 ? '#fafafa' : '#fff'),
+                    transition: 'background 0.2s',
+                    '&:hover': { backgroundColor: isLate ? '#ffcdd2' : '#e3f2fd' }
+                  }}
+                >
+                  <TableCell>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      {isLate && <Tooltip title="Xe trễ hẹn"><ErrorIcon color="error" fontSize="small" /></Tooltip>}
+                      <Typography variant="body2" fontWeight="bold" color={isLate ? 'error' : 'primary'}>
+                        {car.plateNumber}
+                      </Typography>
+                    </Box>
+                  </TableCell>
+                  <TableCell>{car.carType?.name || 'Chưa xác định'}</TableCell>
+                  <TableCell>
+                    <Chip
+                      label={getConditionConfig(car.condition).label}
+                      color={getConditionConfig(car.condition).color}
+                      size="small"
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Chip
+                        icon={renderStatusIcon(car.status)}
+                        label={getStatusConfig(car.status).label}
+                        color={getStatusConfig(car.status).color}
+                        size="small"
+                      />
+                      {isLate && <Chip label="Trễ hẹn" color="error" size="small" icon={<ErrorIcon />} />}
+                    </Box>
+                  </TableCell>
+                  <TableCell>{getWorkerNames(car, 'main')}</TableCell>
+                  <TableCell>{getWorkerNames(car, 'sub')}</TableCell>
+                  <TableCell>{car.currentDate || 'Chưa xác định'}</TableCell>
+                  <TableCell>{car.deliveryTime || 'Chưa xác định'}</TableCell>
+                  <TableCell>{car.location?.name || 'Chưa xác định'}</TableCell>
+                  <TableCell>
+                    <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                      {getAvailableStatusTransitions(car.status).map((status) => (
+                        <Tooltip key={status} title={`Chuyển sang ${getStatusConfig(status).label}`}>
+                          <IconButton
+                            size="small"
+                            color={getStatusConfig(status).color}
+                            onClick={() => handleStatusChangeClick(car, status)}
+                            sx={{ borderRadius: 2 }}
+                          >
+                            {renderStatusIcon(status)}
+                          </IconButton>
+                        </Tooltip>
+                      ))}
+                    </Box>
+                  </TableCell>
+
+                  <TableCell>
+                    <Box sx={{ display: 'flex', gap: 0.5 }}>
+                      <Tooltip title="Sửa xe">
+                        <span>
+                          <IconButton
+                            size="small"
+                            color="primary"
+                            onClick={() => handleEditClick(car)}
+                            sx={{ borderRadius: 2 }}
+                          >
+                            <Edit />
+                          </IconButton>
+                        </span>
                       </Tooltip>
-                    ))}
-                  </Box>
-                </TableCell>
-
-                <TableCell>
-                  <Box sx={{ display: 'flex', gap: 0.5 }}>
-                    <IconButton
-                      size="small"
-                      color="primary"
-                      onClick={() => handleEditClick(car)}
-                    >
-                      <Edit />
-                    </IconButton>
-
-                    <IconButton
-                      size="small"
-                      color="error"
-                      onClick={() => handleDelete(car._id)}
-                    >
-                      <Delete />
-                    </IconButton>
-
-                    <IconButton
-                      size="small"
-                      color="secondary"
-                      component={Link}
-                      to={`/cars/${car._id}/history`}
-                    >
-                      <History />
-                    </IconButton>
-                  </Box>
-                </TableCell>
-              </TableRow>
-            ))}
+                      <Tooltip title="Xoá xe">
+                        <span>
+                          <IconButton
+                            size="small"
+                            color="error"
+                            onClick={() => handleDelete(car._id)}
+                            sx={{ borderRadius: 2 }}
+                          >
+                            <Delete />
+                          </IconButton>
+                        </span>
+                      </Tooltip>
+                      <Tooltip title="Lịch sử xe">
+                        <span>
+                          <IconButton
+                            size="small"
+                            color="secondary"
+                            component={Link}
+                            to={`/cars/${car._id}/history`}
+                            sx={{ borderRadius: 2 }}
+                          >
+                            <History />
+                          </IconButton>
+                        </span>
+                      </Tooltip>
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </Paper>
@@ -636,23 +699,40 @@ const ManageCars = () => {
 
   return (
     <Box sx={{ p: { xs: 2, sm: 4 } }}>
-      <Typography variant="h5" gutterBottom>
-        Quản lý xe
-      </Typography>
+      <Box
+        sx={{
+          background: '#f5f5f5',
+          borderRadius: 2,
+          px: { xs: 2, sm: 4 },
+          py: { xs: 2, sm: 3 },
+          mb: 3,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 2,
+        }}
+      >
+        <DirectionsCarIcon color="primary" sx={{ fontSize: 40 }} />
+        <Box>
+          <Typography variant="h5" fontWeight="bold" color="primary">
+            Quản lý xe
+          </Typography>
+          <Typography variant="body2" color="textSecondary">
+            Theo dõi, cập nhật trạng thái và lịch sử xe trong hệ thống
+          </Typography>
+        </Box>
+      </Box>
+      <Divider sx={{ mb: 2 }} />
 
       {/* Bộ lọc địa điểm và ngày giao xe */}
-      <Paper sx={{ p: 2, mb: 3 }}>
-        <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-            <Typography variant="body2" fontWeight="bold">
-              Địa điểm
-            </Typography>
-            <FormControl sx={{ minWidth: 200 }} size="small">
-              <InputLabel>Lọc theo địa điểm</InputLabel>
+      <Paper sx={{ p: { xs: 2, sm: 3 }, mb: 3, borderRadius: 3, boxShadow: 3 }}>
+        <Grid container spacing={2} alignItems="flex-end">
+          <Grid item xs={12} sm={3}>
+            <FormControl fullWidth size="small">
+              <InputLabel><LocationOn sx={{ mr: 1 }} fontSize="small" />Địa điểm</InputLabel>
               <Select
                 value={selectedLocation}
                 onChange={(e) => handleLocationChange(e.target.value)}
-                label="Lọc theo địa điểm"
+                label={<><LocationOn sx={{ mr: 1 }} fontSize="small" />Địa điểm</>}
               >
                 <MenuItem value="all">
                   <Typography variant="body2" fontWeight="bold">
@@ -666,45 +746,41 @@ const ManageCars = () => {
                 ))}
               </Select>
             </FormControl>
-          </Box>
-
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-            <Typography variant="body2" fontWeight="bold">
-              Ngày nhận xe
-            </Typography>
+          </Grid>
+          <Grid item xs={12} sm={3}>
             <TextField
-              label="Lọc theo ngày nhận xe"
+              label={<><Schedule sx={{ mr: 1 }} fontSize="small" />Ngày nhận xe</>}
               type="date"
               size="small"
+              fullWidth
               value={filterDate ? moment(filterDate).format('YYYY-MM-DD') : ''}
               onChange={e => setFilterDate(e.target.value ? moment(e.target.value).toDate() : null)}
               InputLabelProps={{ shrink: true }}
             />
-          </Box>
-
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-            <Typography variant="body2" fontWeight="bold" sx={{ visibility: 'hidden' }}>
-              Xoá lọc ngày
-            </Typography>
+          </Grid>
+          <Grid item xs={12} sm={2}>
             <Button
               variant="outlined"
               size="small"
+              fullWidth
               onClick={() => setFilterDate(null)}
               disabled={!filterDate}
+              startIcon={<Delete />}
             >
               Xoá lọc ngày
             </Button>
-          </Box>
-
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-            <Typography variant="body2" fontWeight="bold">
-              Tổng cộng
-            </Typography>
-            <Typography variant="body2" color="textSecondary">
-              {displayedCars.length} xe
-            </Typography>
-          </Box>
-        </Box>
+          </Grid>
+          <Grid item xs={12} sm={2}>
+            <Paper elevation={0} sx={{ p: 1, textAlign: 'center', background: '#f5f5f5', borderRadius: 2 }}>
+              <Typography variant="body2" fontWeight="bold" color="primary">
+                <DirectionsCarIcon fontSize="small" sx={{ mr: 1 }} />Tổng cộng
+              </Typography>
+              <Typography variant="body2" color="textSecondary">
+                {displayedCars.length} xe
+              </Typography>
+            </Paper>
+          </Grid>
+        </Grid>
       </Paper>
 
 
@@ -724,9 +800,14 @@ const ManageCars = () => {
       )}
 
       {/* Dialog cập nhật xe */}
-      <Dialog open={editOpen} onClose={() => setEditOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle>Cập nhật thông tin xe</DialogTitle>
-        <DialogContent>
+      <Dialog open={editOpen} onClose={() => setEditOpen(false)} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Edit color="primary" />
+            <Typography variant="h6" fontWeight="bold">Cập nhật thông tin xe</Typography>
+          </Box>
+        </DialogTitle>
+        <DialogContent sx={{ p: 3 }}>
           <Grid container spacing={2} sx={{ mt: 1 }}>
             <Grid item xs={12} sm={6}>
               <TextField
@@ -735,6 +816,8 @@ const ManageCars = () => {
                 name="plateNumber"
                 value={editData.plateNumber || ''}
                 onChange={handleChange}
+                InputLabelProps={{ shrink: true }}
+                sx={{ mb: 2 }}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
@@ -747,17 +830,20 @@ const ManageCars = () => {
                   setEditData((prev) => ({ ...prev, deliveryDate: e.target.value }))
                 }
                 InputLabelProps={{ shrink: true }}
+                sx={{ mb: 2 }}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
-              <FormControl fullWidth>
-                <InputLabel>Giờ giao xe (HH)</InputLabel>
+              <FormControl fullWidth sx={{ mb: 2 }}>
+                <InputLabel shrink>Giờ giao xe (HH)</InputLabel>
                 <Select
                   value={editData.deliveryHour || ''}
                   label="Giờ giao xe (HH)"
                   onChange={(e) =>
                     setEditData((prev) => ({ ...prev, deliveryHour: e.target.value }))
                   }
+                  displayEmpty
+                  inputProps={{ 'aria-label': 'Giờ giao xe (HH)' }}
                 >
                   {[...Array(24).keys()].map((hour) => (
                     <MenuItem key={hour} value={hour}>
@@ -767,8 +853,6 @@ const ManageCars = () => {
                 </Select>
               </FormControl>
             </Grid>
-
-
             <Grid item xs={12} sm={6}>
               <Autocomplete
                 options={carTypes}
@@ -778,18 +862,21 @@ const ManageCars = () => {
                   setEditData((prev) => ({ ...prev, carType: newValue }));
                 }}
                 renderInput={(params) => (
-                  <TextField {...params} label="Loại xe" fullWidth />
+                  <TextField {...params} label="Loại xe" fullWidth InputLabelProps={{ shrink: true }} sx={{ mb: 2 }} />
                 )}
+                sx={{ mb: 2 }}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
-              <FormControl fullWidth>
-                <InputLabel>Giám sát</InputLabel>
+              <FormControl fullWidth sx={{ mb: 2 }}>
+                <InputLabel shrink>Giám sát</InputLabel>
                 <Select
                   name="supervisor"
                   value={editData.supervisor || ''}
                   onChange={handleChange}
                   label="Giám sát"
+                  displayEmpty
+                  inputProps={{ 'aria-label': 'Giám sát' }}
                 >
                   <MenuItem value="">
                     <em>Không chọn</em>
@@ -817,8 +904,9 @@ const ManageCars = () => {
                   }));
                 }}
                 renderInput={(params) => (
-                  <TextField {...params} label="Thợ chính" fullWidth />
+                  <TextField {...params} label="Thợ chính" fullWidth InputLabelProps={{ shrink: true }} sx={{ mb: 2 }} />
                 )}
+                sx={{ mb: 2 }}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
@@ -836,15 +924,16 @@ const ManageCars = () => {
                   }));
                 }}
                 renderInput={(params) => (
-                  <TextField {...params} label="Thợ phụ" fullWidth />
+                  <TextField {...params} label="Thợ phụ" fullWidth InputLabelProps={{ shrink: true }} sx={{ mb: 2 }} />
                 )}
+                sx={{ mb: 2 }}
               />
             </Grid>
           </Grid>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setEditOpen(false)}>Hủy</Button>
-          <Button onClick={handleEditSave} variant="contained">
+        <DialogActions sx={{ justifyContent: 'center', gap: 2, p: 2 }}>
+          <Button onClick={() => setEditOpen(false)} variant="outlined">Hủy</Button>
+          <Button onClick={handleEditSave} variant="contained" color="primary">
             Lưu
           </Button>
         </DialogActions>
@@ -856,14 +945,15 @@ const ManageCars = () => {
         onClose={() => setStatusUpdateOpen(false)}
         maxWidth="sm"
         fullWidth
+        PaperProps={{ sx: { borderRadius: 3 } }}
       >
         <DialogTitle>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <SwapHoriz color="primary" />
-            Chuyển trạng thái xe
+            <Typography variant="h6" fontWeight="bold">Chuyển trạng thái xe</Typography>
           </Box>
         </DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ p: 3 }}>
           {statusUpdateData.car && (
             <Box sx={{ mb: 3 }}>
               <Typography variant="h6" color="primary" gutterBottom>
@@ -888,7 +978,7 @@ const ManageCars = () => {
                     : 'Chọn thợ cho công việc này:'
                 }
               </Typography>
-              <FormControl fullWidth sx={{ mt: 2 }}>
+              <FormControl fullWidth sx={{ mt: 2, mb: 2 }}>
                 <InputLabel>Chọn thợ</InputLabel>
                 <Select
                   value={selectedNewWorker}
@@ -919,14 +1009,14 @@ const ManageCars = () => {
               </FormControl>
 
               {availableWorkers.length === 0 && (
-                <Alert severity="warning" sx={{ mt: 2 }}>
+                <Alert severity="warning" sx={{ mt: 2, mb: 2 }}>
                   Hiện tại không có thợ nào rảnh. Vui lòng thử lại sau.
                 </Alert>
               )}
 
               {/* Thông báo đặc biệt cho từng trường hợp */}
               {statusUpdateData.newStatus === 'waiting_wash' && (
-                <Alert severity="info" sx={{ mt: 2 }}>
+                <Alert severity="info" sx={{ mt: 2, mb: 2 }}>
                   <Typography variant="body2">
                     💡 <strong>Lưu ý:</strong> Nếu không chọn thợ mới, thợ hiện tại sẽ tiếp tục rửa xe và vẫn ở trạng thái bận.
                   </Typography>
@@ -934,7 +1024,7 @@ const ManageCars = () => {
               )}
 
               {statusUpdateData.newStatus === 'additional_repair' && (
-                <Alert severity="warning" sx={{ mt: 2 }}>
+                <Alert severity="warning" sx={{ mt: 2, mb: 2 }}>
                   <Typography variant="body2">
                     ⚠️ <strong>Bắt buộc:</strong> Phải chọn thợ mới để thực hiện sửa chữa bổ sung.
                   </Typography>
@@ -947,7 +1037,7 @@ const ManageCars = () => {
           {!statusUpdateData.needsWorker && (
             <Box>
               {statusUpdateData.newStatus === 'waiting_handover' && (
-                <Alert severity="success" sx={{ mt: 2 }}>
+                <Alert severity="success" sx={{ mt: 2, mb: 2 }}>
                   <Typography variant="body2">
                     ✅ Xe sẽ chuyển sang trạng thái chờ giao. Thợ hiện tại sẽ được giải phóng.
                   </Typography>
@@ -955,7 +1045,7 @@ const ManageCars = () => {
               )}
 
               {statusUpdateData.newStatus === 'delivered' && (
-                <Alert severity="success" sx={{ mt: 2 }}>
+                <Alert severity="success" sx={{ mt: 2, mb: 2 }}>
                   <Typography variant="body2">
                     🎉 Xe sẽ được đánh dấu là đã giao. Tất cả thợ liên quan sẽ được giải phóng.
                   </Typography>
@@ -964,13 +1054,14 @@ const ManageCars = () => {
             </Box>
           )}
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setStatusUpdateOpen(false)}>
+        <DialogActions sx={{ justifyContent: 'center', gap: 2, p: 2 }}>
+          <Button onClick={() => setStatusUpdateOpen(false)} variant="outlined">
             Hủy
           </Button>
           <Button
             onClick={handleStatusUpdateConfirm}
             variant="contained"
+            color="primary"
             disabled={
               (statusUpdateData.newStatus === 'additional_repair' && !selectedNewWorker) ||
               (availableWorkers.length === 0 && statusUpdateData.needsWorker && statusUpdateData.newStatus !== 'waiting_wash')
@@ -980,22 +1071,28 @@ const ManageCars = () => {
           </Button>
         </DialogActions>
       </Dialog>
-      <Dialog open={confirmDialogOpen} onClose={() => setConfirmDialogOpen(false)}>
-        <DialogTitle>Xác thực để xoá xe</DialogTitle>
-        <DialogContent>
+      <Dialog open={confirmDialogOpen} onClose={() => setConfirmDialogOpen(false)} PaperProps={{ sx: { borderRadius: 3 } }}>
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Lock color="error" />
+            <Typography variant="h6" fontWeight="bold">Xác thực để xoá xe</Typography>
+          </Box>
+        </DialogTitle>
+        <DialogContent sx={{ p: 3 }}>
           <TextField
             type="password"
             label="Nhập mật khẩu"
             fullWidth
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            sx={{ mt: 2 }}
+            sx={{ mt: 2, mb: 2 }}
           />
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setConfirmDialogOpen(false)}>Huỷ</Button>
+        <DialogActions sx={{ justifyContent: 'center', gap: 2, p: 2 }}>
+          <Button onClick={() => setConfirmDialogOpen(false)} variant="outlined">Huỷ</Button>
           <Button
             variant="contained"
+            color="error"
             onClick={() => {
               if (password === '123456@') {
                 markCarPasswordVerified();

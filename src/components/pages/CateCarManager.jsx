@@ -18,6 +18,10 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import SaveIcon from '@mui/icons-material/Save';
 import CancelIcon from '@mui/icons-material/Cancel';
+import DirectionsCarIcon from '@mui/icons-material/DirectionsCar';
+import LockIcon from '@mui/icons-material/Lock';
+import Tooltip from '@mui/material/Tooltip';
+import Divider from '@mui/material/Divider';
 
 import {
   createCateCar,
@@ -116,57 +120,83 @@ const CateCarManager = () => {
 
   return (
     <Box p={3} maxWidth={600} mx="auto">
-      <Typography variant="h5" mb={3} fontWeight="bold" textAlign="center">
-        🛠️ Quản lý loại xe
-      </Typography>
-
-      <Box display="flex" gap={2} mb={3}>
-        <TextField
-          label="Tên loại xe"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          fullWidth
-          variant="outlined"
-          size="small"
-        />
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={handleAddCateCar}
-          sx={{ px: 4 }}
-        >
-          Thêm
-        </Button>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2, justifyContent: 'center' }}>
+        <DirectionsCarIcon color="primary" sx={{ fontSize: 36 }} />
+        <Typography variant="h5" fontWeight="bold" color="primary">
+          Quản lý loại xe
+        </Typography>
       </Box>
+      <Divider sx={{ mb: 3 }} />
 
-      <Paper elevation={4} sx={{ maxHeight: 680, overflowY: 'auto', borderRadius: 2 }}>
+      <Paper elevation={3} sx={{ p: 2, mb: 3, borderRadius: 3, boxShadow: 2 }}>
+        <Box display="flex" gap={2}>
+          <TextField
+            label="Tên loại xe"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            fullWidth
+            variant="outlined"
+            size="small"
+            InputLabelProps={{ shrink: true }}
+          />
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={handleAddCateCar}
+            sx={{ px: 4, borderRadius: 2, fontWeight: 600 }}
+          >
+            Thêm
+          </Button>
+        </Box>
+      </Paper>
+
+      <Paper elevation={4} sx={{ maxHeight: 680, overflowY: 'auto', borderRadius: 3, boxShadow: 3, p: 1 }}>
         <List>
           {cateCars.map((cate) => (
             <ListItem
               key={cate._id}
               divider
               sx={{
-                '&:hover': { backgroundColor: '#f9f9f9' },
+                '&:hover': { backgroundColor: '#f5f5f5' },
                 cursor: editingId === cate._id ? 'text' : 'default',
+                borderRadius: 2,
+                mb: 1,
+                px: 1,
               }}
               secondaryAction={
                 editingId === cate._id ? (
                   <>
-                    <IconButton color="primary" onClick={handleSaveEdit}>
-                      <SaveIcon />
-                    </IconButton>
-                    <IconButton onClick={handleCancelEdit}>
-                      <CancelIcon />
-                    </IconButton>
+                    <Tooltip title="Lưu">
+                      <span>
+                        <IconButton color="primary" onClick={handleSaveEdit} sx={{ borderRadius: 2 }}>
+                          <SaveIcon />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                    <Tooltip title="Huỷ">
+                      <span>
+                        <IconButton onClick={handleCancelEdit} sx={{ borderRadius: 2 }}>
+                          <CancelIcon />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
                   </>
                 ) : (
                   <>
-                    <IconButton onClick={() => handleEdit(cate._id, cate.name)}>
-                      <EditIcon />
-                    </IconButton>
-                    <IconButton color="error" onClick={() => handleDelete(cate._id)}>
-                      <DeleteIcon />
-                    </IconButton>
+                    <Tooltip title="Sửa loại xe">
+                      <span>
+                        <IconButton onClick={() => handleEdit(cate._id, cate.name)} sx={{ borderRadius: 2 }}>
+                          <EditIcon />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                    <Tooltip title="Xoá loại xe">
+                      <span>
+                        <IconButton color="error" onClick={() => handleDelete(cate._id)} sx={{ borderRadius: 2 }}>
+                          <DeleteIcon />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
                   </>
                 )
               }
@@ -177,12 +207,14 @@ const CateCarManager = () => {
                   onChange={(e) => setEditingName(e.target.value)}
                   size="small"
                   fullWidth
+                  InputLabelProps={{ shrink: true }}
+                  sx={{ background: '#fffde7', borderRadius: 1 }}
                 />
               ) : (
                 <ListItemText
                   primary={cate.name}
                   primaryTypographyProps={{ fontSize: 16, fontWeight: 500 }}
-                  sx={{ pointerEvents: 'none' }}
+                  sx={{ pointerEvents: 'none', ml: 1 }}
                 />
               )}
             </ListItem>
@@ -197,22 +229,28 @@ const CateCarManager = () => {
       </Paper>
 
       {/* Dialog xác thực xoá */}
-      <Dialog open={confirmDialogOpen} onClose={() => setConfirmDialogOpen(false)}>
-        <DialogTitle>Xác thực để xoá</DialogTitle>
-        <DialogContent>
+      <Dialog open={confirmDialogOpen} onClose={() => setConfirmDialogOpen(false)} PaperProps={{ sx: { borderRadius: 3 } }}>
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <LockIcon color="error" />
+            <Typography variant="h6" fontWeight="bold">Xác thực để xoá</Typography>
+          </Box>
+        </DialogTitle>
+        <DialogContent sx={{ p: 3 }}>
           <TextField
             type="password"
             label="Nhập mật khẩu"
             fullWidth
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            sx={{ mt: 2 }}
+            sx={{ mt: 2, mb: 2 }}
           />
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setConfirmDialogOpen(false)}>Huỷ</Button>
+        <DialogActions sx={{ justifyContent: 'center', gap: 2, p: 2 }}>
+          <Button onClick={() => setConfirmDialogOpen(false)} variant="outlined">Huỷ</Button>
           <Button
             variant="contained"
+            color="error"
             onClick={() => {
               if (password === '123456@') {
                 markPasswordVerified();

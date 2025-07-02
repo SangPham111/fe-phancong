@@ -6,8 +6,8 @@ const isInternalNetwork =
   window.location.hostname === 'localhost';
 
 const API_BASE = isInternalNetwork
-  ? 'http://192.168.1.20:3000/api'         // 👉 IP nội bộ khi ở cùng Wi-Fi
-  : 'http://100.127.133.38:3000/api';      // 👉 IP Tailscale khi ở mạng khác
+  ? 'http://192.168.1.20:3000/api'         // 👉 IP nội bộ
+  : 'http://100.127.133.38:3000/api';      // 👉 IP Tailscale từ xa
 
 // ============================= WORKER =============================
 export const getAllWorkers = () => axios.get(`${API_BASE}/worker`);
@@ -17,6 +17,15 @@ export const updateWorker = (id, data) => axios.put(`${API_BASE}/worker/${id}`, 
 export const deleteWorker = (id) => axios.delete(`${API_BASE}/worker/${id}`);
 export const getAvailableWorkers = () => axios.get(`${API_BASE}/worker/available`);
 export const getBusyWorkersWithCars = () => axios.get(`${API_BASE}/worker/busy`);
+export const getWorkerPerformance = (workerId, from, to) =>
+  axios.get(`${API_BASE}/worker/${workerId}/performance`, {
+    params: { from, to },
+  });
+export const getWorkerDailyPerformancePercentage = (workerId, date) =>
+  axios.get(`${API_BASE}/worker/${workerId}/performance/daily`, {
+    params: { date },
+  });
+export const searchWorkersByName = (name) => axios.get(`${API_BASE}/worker`, { params: { name } });
 
 // ============================= SUPERVISOR =============================
 export const getAllSupervisors = () => axios.get(`${API_BASE}/supervisors`);

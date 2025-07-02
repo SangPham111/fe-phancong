@@ -20,9 +20,13 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Paper,
+  Tooltip,
 } from '@mui/material';
 
 import { Edit, Delete, Save, Close } from '@mui/icons-material';
+import LocationOnIcon from '@mui/icons-material/LocationOn';
+import LockIcon from '@mui/icons-material/Lock';
 
 const LocationManager = () => {
   const [locations, setLocations] = useState([]);
@@ -106,93 +110,131 @@ const LocationManager = () => {
   };
 
   return (
-    <Box sx={{ maxWidth: 500, mx: 'auto', mt: 4 }}>
-      <Typography variant="h6" gutterBottom>
-        Quản lý địa điểm
-      </Typography>
-
-      {/* Form thêm địa điểm */}
-      <Box
-        component="form"
-        onSubmit={handleCreate}
-        sx={{ display: 'flex', gap: 2, mb: 3 }}
-      >
-        <TextField
-          label="Tên địa điểm mới"
-          value={newName}
-          onChange={(e) => setNewName(e.target.value)}
-          fullWidth
-        />
-        <Button type="submit" variant="contained" disabled={loading}>
-          {loading ? 'Đang thêm...' : 'Thêm'}
-        </Button>
+    <Box sx={{ maxWidth: 500, mx: 'auto', p: 6 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2, justifyContent: 'center' }}>
+        <LocationOnIcon color="primary" sx={{ fontSize: 36 }} />
+        <Typography variant="h5" fontWeight="bold" color="primary">
+          Quản lý địa điểm
+        </Typography>
       </Box>
+      <Divider sx={{ mb: 3 }} />
 
-      {/* Danh sách địa điểm */}
-      <List>
-        {locations.map((loc) => (
-          <React.Fragment key={loc._id}>
-            <ListItem
-              secondaryAction={
-                editId === loc._id ? (
-                  <>
-                    <IconButton onClick={() => handleUpdate(loc._id)}>
-                      <Save />
-                    </IconButton>
-                    <IconButton onClick={() => setEditId(null)}>
-                      <Close />
-                    </IconButton>
-                  </>
+      <Paper elevation={3} sx={{ p: 2, mb: 3, borderRadius: 3, boxShadow: 2 }}>
+        <Box
+          component="form"
+          onSubmit={handleCreate}
+          sx={{ display: 'flex', gap: 2 }}
+        >
+          <TextField
+            label="Tên địa điểm mới"
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            fullWidth
+            InputLabelProps={{ shrink: true }}
+          />
+          <Button type="submit" variant="contained" disabled={loading} sx={{ borderRadius: 2, fontWeight: 600 }}>
+            {loading ? 'Đang thêm...' : 'Thêm'}
+          </Button>
+        </Box>
+      </Paper>
+
+      <Paper elevation={4} sx={{ borderRadius: 3, boxShadow: 3, p: 1 }}>
+        <List>
+          {locations.map((loc) => (
+            <React.Fragment key={loc._id}>
+              <ListItem
+                sx={{
+                  '&:hover': { backgroundColor: '#f5f5f5' },
+                  borderRadius: 2,
+                  mb: 1,
+                  px: 1,
+                }}
+                secondaryAction={
+                  editId === loc._id ? (
+                    <>
+                      <Tooltip title="Lưu">
+                        <span>
+                          <IconButton onClick={() => handleUpdate(loc._id)} sx={{ borderRadius: 2 }}>
+                            <Save />
+                          </IconButton>
+                        </span>
+                      </Tooltip>
+                      <Tooltip title="Huỷ">
+                        <span>
+                          <IconButton onClick={() => setEditId(null)} sx={{ borderRadius: 2 }}>
+                            <Close />
+                          </IconButton>
+                        </span>
+                      </Tooltip>
+                    </>
+                  ) : (
+                    <>
+                      <Tooltip title="Sửa địa điểm">
+                        <span>
+                          <IconButton
+                            onClick={() => {
+                              setEditId(loc._id);
+                              setEditName(loc.name);
+                            }}
+                            sx={{ borderRadius: 2 }}
+                          >
+                            <Edit />
+                          </IconButton>
+                        </span>
+                      </Tooltip>
+                      <Tooltip title="Xoá địa điểm">
+                        <span>
+                          <IconButton onClick={() => handleDelete(loc._id)} sx={{ borderRadius: 2 }}>
+                            <Delete />
+                          </IconButton>
+                        </span>
+                      </Tooltip>
+                    </>
+                  )
+                }
+              >
+                {editId === loc._id ? (
+                  <TextField
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    fullWidth
+                    variant="standard"
+                    InputLabelProps={{ shrink: true }}
+                    sx={{ background: '#fffde7', borderRadius: 1 }}
+                  />
                 ) : (
-                  <>
-                    <IconButton
-                      onClick={() => {
-                        setEditId(loc._id);
-                        setEditName(loc.name);
-                      }}
-                    >
-                      <Edit />
-                    </IconButton>
-                    <IconButton onClick={() => handleDelete(loc._id)}>
-                      <Delete />
-                    </IconButton>
-                  </>
-                )
-              }
-            >
-              {editId === loc._id ? (
-                <TextField
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                  fullWidth
-                  variant="standard"
-                />
-              ) : (
-                <ListItemText primary={loc.name} />
-              )}
-            </ListItem>
-            <Divider />
-          </React.Fragment>
-        ))}
-      </List>
+                  <ListItemText primary={loc.name} sx={{ ml: 1 }} />
+                )}
+              </ListItem>
+              <Divider />
+            </React.Fragment>
+          ))}
+        </List>
+      </Paper>
 
       {/* Dialog xác thực mật khẩu xóa */}
-      <Dialog open={confirmDialogOpen} onClose={() => setConfirmDialogOpen(false)}>
-        <DialogTitle>Xác thực để xoá</DialogTitle>
-        <DialogContent>
+      <Dialog open={confirmDialogOpen} onClose={() => setConfirmDialogOpen(false)} PaperProps={{ sx: { borderRadius: 3 } }}>
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <LockIcon color="error" />
+            <Typography variant="h6" fontWeight="bold">Xác thực để xoá</Typography>
+          </Box>
+        </DialogTitle>
+        <DialogContent sx={{ p: 3 }}>
           <TextField
             type="password"
             label="Nhập mật khẩu"
             fullWidth
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            sx={{ mt: 2 }}
+            sx={{ mt: 2, mb: 2 }}
           />
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setConfirmDialogOpen(false)}>Huỷ</Button>
+        <DialogActions sx={{ justifyContent: 'center', gap: 2, p: 2 }}>
+          <Button onClick={() => setConfirmDialogOpen(false)} variant="outlined">Huỷ</Button>
           <Button
             variant="contained"
+            color="error"
             onClick={() => {
               if (password === '123456@') {
                 markPasswordVerified();
