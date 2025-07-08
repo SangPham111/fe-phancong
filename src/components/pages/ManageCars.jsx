@@ -43,6 +43,7 @@ import {
   CardContent,
   CardActions,
   Divider,
+  Stack,
 } from '@mui/material';
 import {
   Edit,
@@ -88,6 +89,9 @@ const ManageCars = () => {
   const [deleteTargetId, setDeleteTargetId] = useState(null);
 
   const ErrorIcon = Error;
+
+  const [searchPlate, setSearchPlate] = useState('');
+  const [tableSupervisor, setTableSupervisor] = useState('');
 
   // Danh sách xe sau khi lọc theo ngày nhận xe
   const displayedCars = useMemo(() => {
@@ -433,6 +437,14 @@ const ManageCars = () => {
     return all.filter((w, i, arr) => arr.findIndex(a => a._id === w._id) === i);
   };
 
+  // Lấy danh sách giám sát viên duy nhất từ danh sách xe truyền vào
+  const getSupervisorsFromCars = (cars) => {
+    return cars
+      .map(car => car.supervisor)
+      .filter(Boolean)
+      .filter((v, i, a) => v && a.findIndex(t => t?._id === v._id) === i);
+  };
+
   const renderCarCard = (car) => (
     <Card key={car._id} sx={{ mb: 2, borderRadius: 3, boxShadow: 3, border: (car.isLate || car.overdue) ? '2px solid #f44336' : undefined }}>
       <CardContent>
@@ -473,6 +485,9 @@ const ManageCars = () => {
             </Typography>
             <Typography variant="body2" color="textSecondary">
               <strong>Địa điểm:</strong> {car.location?.name || 'Chưa xác định'}
+            </Typography>
+            <Typography variant="body2" color="textSecondary">
+              <strong>Giám sát:</strong> {car.supervisor?.name || '---'}
             </Typography>
           </Grid>
           <Grid item xs={12} sm={6}>
@@ -563,12 +578,43 @@ const ManageCars = () => {
         return car.currentDate === selected;
       });
     }
+    // Áp dụng filter biển số và giám sát viên
+    if (searchPlate) {
+      filtered = filtered.filter(car => car.plateNumber?.toLowerCase().includes(searchPlate.toLowerCase()));
+    }
+    if (tableSupervisor) {
+      filtered = filtered.filter(car => car.supervisor?._id === tableSupervisor);
+    }
     const sortedCars = [...filtered].sort(
       (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
     );
 
     return (
       <Paper sx={{ width: '100%', overflowX: 'auto', borderRadius: 3, boxShadow: 3 }}>
+        {/* Bộ lọc tìm kiếm biển số xe và giám sát viên */}
+        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center', p: 2 }}>
+          <TextField
+            label="Tìm kiếm biển số xe"
+            variant="outlined"
+            size="small"
+            value={searchPlate}
+            onChange={e => setSearchPlate(e.target.value)}
+            sx={{ maxWidth: 250, width: '100%' }}
+          />
+          <FormControl sx={{ minWidth: 180, maxWidth: 250, width: '100%' }} size="small">
+            <InputLabel>Chọn giám sát</InputLabel>
+            <Select
+              value={tableSupervisor}
+              label="Chọn giám sát"
+              onChange={e => setTableSupervisor(e.target.value)}
+            >
+              <MenuItem value="">Tất cả giám sát</MenuItem>
+              {getSupervisorsFromCars(data || cars).map(sup => (
+                <MenuItem key={sup._id} value={sup._id}>{sup.name}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Box>
         <Table stickyHeader sx={{ minWidth: 1100 }}>
           <TableHead>
             <TableRow sx={{ background: '#f5f5f5' }}>
@@ -581,6 +627,7 @@ const ManageCars = () => {
               <TableCell sx={{ fontWeight: 'bold', background: '#f5f5f5' }}>Ngày nhận</TableCell>
               <TableCell sx={{ fontWeight: 'bold', background: '#f5f5f5' }}>Thời gian giao</TableCell>
               <TableCell sx={{ fontWeight: 'bold', background: '#f5f5f5' }}>Địa điểm</TableCell>
+              <TableCell sx={{ fontWeight: 'bold', background: '#f5f5f5' }}>Giám sát</TableCell>
               <TableCell sx={{ fontWeight: 'bold', background: '#f5f5f5' }}>Chuyển trạng thái</TableCell>
               <TableCell sx={{ fontWeight: 'bold', background: '#f5f5f5' }}>Thao tác</TableCell>
             </TableRow>
@@ -629,6 +676,7 @@ const ManageCars = () => {
                   <TableCell>{car.currentDate || 'Chưa xác định'}</TableCell>
                   <TableCell>{car.deliveryTime || 'Chưa xác định'}</TableCell>
                   <TableCell>{car.location?.name || 'Chưa xác định'}</TableCell>
+                  <TableCell>{car.supervisor?.name || '---'}</TableCell>
                   <TableCell>
                     <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
                       {getAvailableStatusTransitions(car.status).map((status) => (
@@ -783,17 +831,54 @@ const ManageCars = () => {
         </Grid>
       </Paper>
 
+      {/* Bộ lọc biển số xe và giám sát viên cho mobile (card view) */}
+      {isMobile && (
+        <Box sx={{ mb: 2 }}>
+          <Stack spacing={2} direction="column">
+            <TextField
+              label="Tìm kiếm biển số xe"
+              variant="outlined"
+              size="small"
+              value={searchPlate}
+              onChange={e => setSearchPlate(e.target.value)}
+              fullWidth
+            />
+            <FormControl fullWidth size="small">
+              <InputLabel>Chọn giám sát</InputLabel>
+              <Select
+                value={tableSupervisor}
+                label="Chọn giám sát"
+                onChange={e => setTableSupervisor(e.target.value)}
+              >
+                <MenuItem value="">Tất cả giám sát</MenuItem>
+                {getSupervisorsFromCars(displayedCars).map(sup => (
+                  <MenuItem key={sup._id} value={sup._id}>{sup.name}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Stack>
+        </Box>
+      )}
 
       {/* Hiển thị danh sách xe */}
       {isMobile ? (
         <Box>
-          {[...displayedCars]
-            .sort((a, b) => {
-              const dateA = a.createdAt ? new Date(a.createdAt) : new Date(0);
-              const dateB = b.createdAt ? new Date(b.createdAt) : new Date(0);
-              return dateB - dateA; // sắp xếp mới nhất lên trước
-            })
-            .map(renderCarCard)}
+          {(() => {
+            let filtered = displayedCars;
+            if (searchPlate) {
+              filtered = filtered.filter(car => car.plateNumber?.toLowerCase().includes(searchPlate.toLowerCase()));
+            }
+            if (tableSupervisor) {
+              filtered = filtered.filter(car => car.supervisor?._id === tableSupervisor);
+            }
+            return [...filtered]
+              .sort((a, b) => {
+                const dateA = a.createdAt ? new Date(a.createdAt) : new Date(0);
+                const dateB = b.createdAt ? new Date(b.createdAt) : new Date(0);
+                return dateB - dateA; // sắp xếp mới nhất lên trước
+              })
+              .map(renderCarCard);
+          })()}
         </Box>
       ) : (
         renderTable(displayedCars)
