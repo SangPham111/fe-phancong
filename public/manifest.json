@@ -1,0 +1,21 @@
+{
+    "name": "Quản Lý Công Việc",
+    "short_name": "QLCV",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#a80000",
+    "icons": [
+      {
+        "src": "https://res.cloudinary.com/drbjrsm0s/image/upload/v1745463450/logo_ulbaie.png",
+        "sizes": "192x192",
+        "type": "image/png"
+      },
+      {
+        "src": "https://res.cloudinary.com/drbjrsm0s/image/upload/v1745463450/logo_ulbaie.png",
+        "sizes": "512x512",
+        "type": "image/png"
+      }
+    ]
+  }
+  
